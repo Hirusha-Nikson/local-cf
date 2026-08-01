@@ -1,0 +1,52 @@
+export const metadata = { title: "Modes" };
+
+# Modes A, B and C
+
+local-cf can reach your bindings three different ways. They are not equivalent,
+and the dashboard labels every binding with which one is in play.
+
+## Mode A — shared runtime (`local-cf`)
+
+We own the dev process. One Miniflare instance hosts your worker and the sidecar
+together, with the sidecar's bindings pointing at the same resource identities.
+
+- D1, KV, R2: **the same objects**, not a copy
+- Durable Objects: live, including in-memory state that has not been checkpointed
+- Queues: live producers; your consumer runs in the same runtime
+
+This is the mode worth using if you can.
+
+## Mode B — attached (`local-cf attach`)
+
+Your own pipeline already runs Miniflare — OpenNext, Nuxt, a custom harness. We
+cannot inject into that process, so local-cf starts a **separate** Miniflare
+instance pointed at the same `.wrangler/state/v3` directory.
+
+- D1, KV, R2: shared through files. Correct, but a write is only visible once the
+  other process flushes it
+- Durable Objects: **not available**. There is no class in our runtime for a
+  binding to point at
+- Queues: in-flight messages are not shared across processes
+
+This is a materially weaker guarantee than Mode A. The dashboard says
+"on disk" rather than "live" on every affected binding instead of implying
+parity.
+
+```bash
+# in the same project directory as the dev server you already have running
+local-cf attach --port 8788
+```
+
+Use a different port from your dev server. In attach mode local-cf serves only
+the studio — your app stays where it was.
+
+## Mode C — remote (`local-cf remote`)
+
+No local runtime at all. The sidecar's routes proxy to the Cloudflare REST API
+with a stored API token.
+
+- D1, KV, R2: your real account
+- Durable Objects, Queues: no REST API equivalent, so not browsable
+
+Route shapes are identical to local mode, so the dashboard code path barely
+branches — only the data source underneath changes.

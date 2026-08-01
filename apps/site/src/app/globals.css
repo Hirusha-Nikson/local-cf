@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Tailwind v4 skips node_modules; the shared UI package must be registered. */
+@source "../../../../packages/ui/src";
+
+@theme {
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@local-cf/sidecar",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Hono worker that runs inside workerd next to the user's worker and exposes the local-cf API.",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts"
+    },
+    "./bundle": "./dist/sidecar.js"
+  },
+  "types": "./dist/types/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "node build.mjs && tsc -p tsconfig.json --emitDeclarationOnly",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@local-cf/core": "workspace:*",
+    "hono": "^4.6.16"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "local-cf-site",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-25",
+  // `global_fetch_strictly_public` is required by OpenNext so that fetches to
+  // your own domain go back out through the edge rather than looping in-worker.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+
+  // For ISR at scale, add an R2 bucket bound as NEXT_INC_CACHE_R2_BUCKET and a
+  // WORKER_SELF_REFERENCE service binding, then switch open-next.config.ts to
+  // r2IncrementalCache. Both need resources created in your account first —
+  // see docs/PUBLISHING.md.
+}

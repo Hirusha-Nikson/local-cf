@@ -1,0 +1,65 @@
+export const metadata = { title: "Getting started" };
+
+# Getting started
+
+## 1. Run it
+
+From the directory containing your wrangler config:
+
+```bash
+npx local-cf
+```
+
+You will get one port serving two things:
+
+| URL | What it is |
+| --- | --- |
+| `http://127.0.0.1:8787/` | your worker |
+| `http://127.0.0.1:8787/__local-cf/ui/` | the studio |
+
+Requests outside `/__local-cf` are forwarded to your worker over a service
+binding, which is why a single port is enough.
+
+## 2. Options
+
+```bash
+local-cf --port 8080 --open        # pick a port, open the browser
+local-cf --env staging             # use [env.staging] from your config
+local-cf --config ../app/wrangler.toml
+local-cf --no-watch                # do not rebuild on file changes
+local-cf --quiet                   # keep worker logs out of the terminal
+```
+
+## 3. D1 migrations
+
+Put `.sql` files in the directory named by `migrations_dir` (default
+`migrations/`). The Migrations tab lists them, marks which have been applied,
+and applies pending ones one at a time.
+
+Applied migrations are tracked in a `d1_migrations` table, the same convention
+Wrangler uses, so the two do not fight.
+
+Multi-statement files work: local-cf splits the script itself and runs it as a
+batch, rather than using D1's `exec()` (which requires one statement per line).
+
+## 4. Snapshots
+
+Before a risky change, take a snapshot from the **Snapshots & audit** tab. A
+snapshot is a copy of the whole persist directory (`.wrangler/state/v3`), so it
+captures D1, KV, R2 and Durable Object storage together.
+
+Restoring stops the runtime, swaps the directory, and starts it again — in-memory
+Durable Object state does not survive, by design.
+
+## 5. Remote mode
+
+To browse the real resources in your Cloudflare account instead:
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=...
+export CLOUDFLARE_API_TOKEN=...
+local-cf remote
+```
+
+The token needs **D1 Edit**, **Workers KV Storage Edit** and **Workers R2 Storage
+Edit**. It stays in the Node process and is never sent to the browser.

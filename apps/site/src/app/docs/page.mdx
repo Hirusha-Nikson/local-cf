@@ -1,0 +1,41 @@
+export const metadata = { title: "Introduction" };
+
+# local-cf
+
+A local-first studio for Cloudflare Workers. It shows you the D1 databases, KV
+namespaces, R2 buckets, Durable Objects and Queues your worker is actually
+using — and lets you edit them — without deploying anything or opening the
+Cloudflare dashboard.
+
+## What makes it different
+
+Most local tooling shows you a *copy* of your data: a separate process reads
+the same SQLite file and hopes it stays in sync. local-cf does something
+narrower and stronger. In its default mode it boots **one** `workerd` runtime
+containing two workers:
+
+- your worker, built from your `wrangler.toml` / `wrangler.jsonc`
+- a small Hono sidecar that serves the studio API and the dashboard
+
+Because the sidecar declares bindings with the *same resource identity* as your
+worker — same `database_id`, same `namespace_id`, same `bucket_name`, same
+Durable Object class — Miniflare hands both workers the same underlying objects.
+
+The practical consequence: an un-flushed Durable Object write is visible in the
+dashboard immediately, not after the next checkpoint.
+
+## What it will not pretend to do
+
+There is no runtime API for reading another Durable Object's storage, so the
+Durable Objects view addresses and probes instances rather than claiming to
+browse their state. Attach mode shares files, not memory, and says so on every
+binding. See [Modes](/docs/modes).
+
+## Install
+
+```bash
+npx local-cf
+```
+
+Run it in the directory containing your `wrangler.toml` or `wrangler.jsonc`.
+Nothing is uploaded, and no Cloudflare account is required.

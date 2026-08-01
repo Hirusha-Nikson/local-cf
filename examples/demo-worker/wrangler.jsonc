@@ -1,0 +1,69 @@
+{
+  // Example project used to exercise every binding kind local-cf understands.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "demo-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "vars": {
+    "GREETING": "hello from the demo worker"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "demo-db",
+      // local-cf mirrors this id onto the sidecar so both workers open the
+      // same SQLite file. Keep it stable.
+      "database_id": "demo-db-local-id",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "demo-cache-namespace"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "ASSETS",
+      "bucket_name": "demo-assets"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COUNTER",
+        "class_name": "Counter"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Counter"]
+    }
+  ],
+
+  "queues": {
+    "producers": [
+      {
+        "binding": "JOBS",
+        "queue": "demo-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "demo-jobs",
+        "max_batch_size": 10,
+        "dead_letter_queue": "demo-jobs-dlq"
+      }
+    ]
+  }
+}

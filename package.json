@@ -1,0 +1,23 @@
+{
+  "name": "local-cf-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/**\" build",
+    "build:all": "pnpm -r build",
+    "build:site": "pnpm --filter @local-cf/site build",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec rimraf dist .next .open-next out && rimraf node_modules/.cache",
+    "dev:site": "pnpm --filter @local-cf/site dev",
+    "dev:dashboard": "pnpm --filter @local-cf/dashboard dev",
+    "demo": "pnpm --filter @local-cf/demo-worker demo"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  }
+}

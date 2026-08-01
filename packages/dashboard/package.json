@@ -1,0 +1,29 @@
+{
+  "name": "@local-cf/dashboard",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Static-exported Next.js dashboard bundled into the local-cf npm package (fully offline).",
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "build": "next build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@local-cf/sidecar": "workspace:*",
+    "@local-cf/ui": "workspace:*",
+    "hono": "^4.6.16",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3"
+  }
+}

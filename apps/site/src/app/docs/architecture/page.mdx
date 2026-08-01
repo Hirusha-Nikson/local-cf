@@ -1,0 +1,67 @@
+export const metadata = { title: "Architecture" };
+
+# Architecture
+
+## One runtime, two workers
+
+```ts
+new Miniflare({
+  workers: [
+    sidecarWorkerConfig, // entry: Hono API + dashboard
+    userWorkerConfig,    // your worker
+  ],
+});
+```
+
+The sidecar is the **entry** worker. Anything outside `/__local-cf` is forwarded
+to your worker over a service binding, which is how one port serves both.
+
+Binding identity is mirrored verbatim from your config onto the sidecar. That
+mirroring is the whole trick: Miniflare resolves two workers declaring the same
+`database_id` to the same gateway object.
+
+## The Node bridge
+
+`workerd` cannot read the filesystem, see Miniflare's log stream, or restart the
+runtime — but the dashboard needs all three (migration files, the log tail,
+snapshot restore).
+
+Miniflare's function-form service bindings solve this without a second server:
+
+```ts
+serviceBindings: {
+  BRIDGE: (request) => handleBridgeRequest(request),
+}
+```
+
+The sidecar calls `env.BRIDGE.fetch(...)` and lands directly in the Node process.
+No port, no auth surface, nothing bound to a network interface.
+
+The dashboard's static files are served this way too, which keeps the worker
+script small and avoids depending on Static Assets routing behaviour inside
+Miniflare.
+
+## Typed end to end
+
+The sidecar is a Hono app; the dashboard consumes it with `hc<ApiType>`:
+
+```ts
+const client = hc<ApiType>("/__local-cf/api");
+
+await client.d1[":binding"].migrations.apply.$post({
+  param: { binding: "DB" },
+  json: { name: "0001_init.sql" },
+});
+```
+
+Query strings and JSON bodies are validated on the routes, which is what puts
+them into the client's signature — a typo is a build error, not a runtime
+surprise.
+
+## Two builds of one component tree
+
+The dashboard is a single page whose tabs are component state, not routes. That
+has one deliberate consequence: the same React tree builds twice —
+static-exported into the npm package for offline use, and compiled into this
+site's `/app` route by OpenNext — with no adapter layer between them. The only
+environment-specific value is the API base URL, injected through context.

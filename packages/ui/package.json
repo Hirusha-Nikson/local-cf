@@ -1,0 +1,32 @@
+{
+  "name": "@local-cf/ui",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "React components shared between the bundled offline dashboard and the hosted site.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "build": "echo \"@local-cf/ui is source-only; consumed via transpilePackages\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@local-cf/core": "workspace:*",
+    "@local-cf/sidecar": "workspace:*",
+    "hono": "^4.6.16"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  }
+}

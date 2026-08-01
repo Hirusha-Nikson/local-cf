@@ -1,0 +1,40 @@
+{
+  "name": "@local-cf/core",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared types, wrangler config parsing and Miniflare wiring for local-cf.",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1",
+    "smol-toml": "^1.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "miniflare": "^4.20250109.0",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "miniflare": ">=4"
+  }
+}

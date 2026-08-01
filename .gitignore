@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+.next/
+.open-next/
+.wrangler/
+.turbo/
+*.tsbuildinfo
+.env
+.env.local
+.dev.vars
+.local-cf/
+coverage/
+.DS_Store
+Thumbs.db
