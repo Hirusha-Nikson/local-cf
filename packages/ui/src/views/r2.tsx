@@ -9,6 +9,7 @@ import {
   Empty,
   ErrorNote,
   Input,
+  SplitView,
   Spinner,
   Tag,
 } from "../components/primitives";
@@ -81,114 +82,124 @@ export function R2View() {
     return <Empty>No R2 buckets are declared in your wrangler config.</Empty>;
   }
 
+  const total = objects.data?.objects.reduce((sum, object) => sum + object.size, 0) ?? 0;
+
   return (
-    <div className="grid h-full grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
-      <aside className="border-b border-zinc-200 md:border-b-0 md:border-r dark:border-zinc-800">
+    <SplitView
+      sidebar={
         <BindingList
           bindings={bindings}
           selected={binding}
           onSelect={setBinding}
           describe={(item) => item.bucketName}
         />
-      </aside>
-
-      <div className="min-w-0 space-y-4 p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            className="max-w-xs"
-            placeholder="Filter by prefix…"
-            value={prefix}
-            onChange={(event) => setPrefix(event.target.value)}
+      }
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <Input
+          className="max-w-xs"
+          placeholder="Filter by prefix…"
+          aria-label="Filter objects by prefix"
+          value={prefix}
+          onChange={(event) => setPrefix(event.target.value)}
+        />
+        <label className="cursor-pointer rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-orange-600">
+          Upload file…
+          <input
+            type="file"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) upload.run(file);
+              event.target.value = "";
+            }}
           />
-          <label className="cursor-pointer rounded-md bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-500">
-            Upload file…
-            <input
-              type="file"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) upload.run(file);
-                event.target.value = "";
-              }}
-            />
-          </label>
-          {upload.pending && <Spinner />}
-        </div>
-
-        {(upload.error || remove.error) && (
-          <ErrorNote title="Operation failed" detail={upload.error ?? remove.error} />
-        )}
-
-        <Card
-          title="Objects"
-          actions={<Tag>{objects.data?.objects.length ?? 0} shown</Tag>}
-        >
-          {objects.loading ? (
-            <Empty>Loading objects…</Empty>
-          ) : objects.error ? (
-            <div className="p-4">
-              <ErrorNote title="Could not list objects" detail={objects.error} />
-            </div>
-          ) : (objects.data?.objects.length ?? 0) === 0 ? (
-            <Empty>This bucket is empty{prefix ? ` under “${prefix}”` : ""}.</Empty>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-                    <th className="px-4 py-2 font-semibold">Key</th>
-                    <th className="px-4 py-2 font-semibold">Size</th>
-                    <th className="px-4 py-2 font-semibold">Type</th>
-                    <th className="px-4 py-2 font-semibold">Uploaded</th>
-                    <th className="px-4 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {objects.data?.objects.map((object) => (
-                    <tr
-                      key={object.key}
-                      className="border-b border-zinc-100 last:border-0 dark:border-zinc-800/60"
-                    >
-                      <td className="max-w-md truncate px-4 py-2 font-mono text-xs">{object.key}</td>
-                      <td className="whitespace-nowrap px-4 py-2 text-zinc-600 dark:text-zinc-400">
-                        {formatBytes(object.size)}
-                      </td>
-                      <td className="px-4 py-2 text-xs text-zinc-500">
-                        {object.contentType ?? "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2 text-xs text-zinc-500">
-                        {new Date(object.uploaded).toLocaleString()}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2 text-right">
-                        <a
-                          href={`${baseUrl}/r2/${encodeURIComponent(binding ?? "")}/object?key=${encodeURIComponent(object.key)}`}
-                          className="mr-2 text-xs font-medium text-zinc-600 hover:text-orange-600 dark:text-zinc-400"
-                        >
-                          Download
-                        </a>
-                        <Button
-                          variant="danger"
-                          className="px-2 py-0.5 text-xs"
-                          disabled={remove.pending}
-                          onClick={() => remove.run(object.key)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        {objects.data?.truncated && (
-          <p className="text-xs text-zinc-500">
-            More objects exist than are shown. Narrow the prefix to page through them.
-          </p>
-        )}
+        </label>
+        {upload.pending && <Spinner />}
       </div>
-    </div>
+
+      {(upload.error || remove.error) && (
+        <ErrorNote title="Operation failed" detail={upload.error ?? remove.error} />
+      )}
+
+      <Card
+        title="Objects"
+        actions={
+          <>
+            <Tag>{objects.data?.objects.length ?? 0} shown</Tag>
+            {total > 0 && <Tag>{formatBytes(total)}</Tag>}
+          </>
+        }
+        footer={
+          objects.data?.truncated
+            ? "More objects exist than are shown. Narrow the prefix to page through them."
+            : undefined
+        }
+      >
+        {objects.loading ? (
+          <Empty>Loading objects…</Empty>
+        ) : objects.error ? (
+          <div className="p-4">
+            <ErrorNote title="Could not list objects" detail={objects.error} />
+          </div>
+        ) : (objects.data?.objects.length ?? 0) === 0 ? (
+          <Empty>This bucket is empty{prefix ? ` under “${prefix}”` : ""}.</Empty>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b hairline surface-sunken">
+                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    Key
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    Size
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    Type
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    Uploaded
+                  </th>
+                  <th scope="col" className="px-4 py-2">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {objects.data?.objects.map((object) => (
+                  <tr key={object.key} className="border-b last:border-0 hairline">
+                    <td className="max-w-md truncate px-4 py-2 font-mono text-xs">{object.key}</td>
+                    <td className="px-4 py-2 whitespace-nowrap tabular-nums text-zinc-600 dark:text-zinc-400">
+                      {formatBytes(object.size)}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-zinc-500">{object.contentType ?? "—"}</td>
+                    <td className="px-4 py-2 text-xs whitespace-nowrap text-zinc-500">
+                      {new Date(object.uploaded).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      <a
+                        href={`${baseUrl}/r2/${encodeURIComponent(binding ?? "")}/object?key=${encodeURIComponent(object.key)}`}
+                        className="mr-3 text-xs font-medium text-zinc-600 hover:text-orange-600 dark:text-zinc-400 dark:hover:text-orange-400"
+                      >
+                        Download
+                      </a>
+                      <Button
+                        variant="danger"
+                        className="px-2 py-0.5 text-xs"
+                        disabled={remove.pending}
+                        onClick={() => remove.run(object.key)}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </SplitView>
   );
 }

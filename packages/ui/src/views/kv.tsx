@@ -8,10 +8,12 @@ import {
   Card,
   Empty,
   ErrorNote,
+  Field,
   Input,
   Spinner,
   Tag,
   Textarea,
+  cx,
 } from "../components/primitives";
 import { useAction, useAsync } from "../hooks";
 import { useBindings, useStudio } from "../studio-context";
@@ -56,8 +58,11 @@ export function KVView() {
   }
 
   return (
-    <div className="grid h-full grid-cols-1 md:grid-cols-[200px_260px_minmax(0,1fr)]">
-      <aside className="border-b border-zinc-200 md:border-b-0 md:border-r dark:border-zinc-800">
+    <div className="grid grid-cols-1 md:grid-cols-[220px_260px_minmax(0,1fr)]">
+      <aside
+        className="border-b hairline md:sticky md:top-12 md:h-[calc(100vh-3rem)] md:overflow-y-auto md:border-b-0 md:border-r"
+        style={{ background: "var(--surface-raised)" }}
+      >
         <BindingList
           bindings={bindings}
           selected={binding}
@@ -69,14 +74,19 @@ export function KVView() {
         />
       </aside>
 
-      <section className="flex min-h-0 flex-col border-b border-zinc-200 md:border-b-0 md:border-r dark:border-zinc-800">
-        <div className="border-b border-zinc-200 p-2 dark:border-zinc-800">
+      <section
+        className="flex min-h-0 flex-col border-b hairline md:sticky md:top-12 md:h-[calc(100vh-3rem)] md:border-b-0 md:border-r"
+        style={{ background: "var(--surface-raised)" }}
+      >
+        <div className="border-b p-2 hairline">
           <Input
             placeholder="Filter by prefix…"
+            aria-label="Filter keys by prefix"
             value={prefix}
             onChange={(event) => setPrefix(event.target.value)}
           />
         </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto">
           {keys.loading ? (
             <Empty>Loading keys…</Empty>
@@ -87,17 +97,19 @@ export function KVView() {
           ) : (keys.data?.keys.length ?? 0) === 0 ? (
             <Empty>No keys{prefix ? ` matching “${prefix}”` : ""}.</Empty>
           ) : (
-            <ul>
+            <ul className="p-1">
               {keys.data?.keys.map((key) => (
                 <li key={key.name}>
                   <button
                     type="button"
                     onClick={() => setSelectedKey(key.name)}
-                    className={
+                    aria-current={key.name === selectedKey ? "true" : undefined}
+                    className={cx(
+                      "w-full truncate rounded px-2 py-1.5 text-left font-mono text-xs transition-colors",
                       key.name === selectedKey
-                        ? "w-full truncate bg-orange-500/10 px-3 py-1.5 text-left font-mono text-xs text-orange-700 dark:text-orange-400"
-                        : "w-full truncate px-3 py-1.5 text-left font-mono text-xs text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    }
+                        ? "bg-orange-50 font-medium text-orange-800 dark:bg-orange-500/10 dark:text-orange-400"
+                        : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
+                    )}
                   >
                     {key.name}
                   </button>
@@ -106,14 +118,29 @@ export function KVView() {
             </ul>
           )}
         </div>
-        {keys.data && !keys.data.listComplete && (
-          <p className="border-t border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
-            Showing the first 500 keys. Narrow with a prefix to see more.
-          </p>
-        )}
+
+        <div className="border-t px-3 py-2 hairline surface-sunken">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-zinc-500">
+              {keys.data?.keys.length ?? 0} key{(keys.data?.keys.length ?? 0) === 1 ? "" : "s"}
+            </span>
+            <Button
+              variant="ghost"
+              className="px-2 py-0.5 text-xs"
+              onClick={() => setSelectedKey(null)}
+            >
+              + New key
+            </Button>
+          </div>
+          {keys.data && !keys.data.listComplete && (
+            <p className="mt-1 text-[11px] text-zinc-500">
+              First 500 shown — narrow with a prefix to see more.
+            </p>
+          )}
+        </div>
       </section>
 
-      <section className="min-w-0 space-y-4 p-4">
+      <div className="min-w-0 space-y-4 p-4 md:p-6">
         {binding && (
           <>
             <ValueEditor
@@ -135,7 +162,7 @@ export function KVView() {
             />
           </>
         )}
-      </section>
+      </div>
     </div>
   );
 }
@@ -222,46 +249,47 @@ function ValueEditor({
         </>
       }
     >
-      <div className="space-y-3 p-4">
+      <div className="space-y-4 p-4">
         {(save.error || remove.error) && (
           <ErrorNote title="Write failed" detail={save.error ?? remove.error} />
         )}
 
-        <label className="block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-zinc-500">Key</span>
+        <Field label="Key">
           <Input
             value={keyName}
             onChange={(event) => setKeyName(event.target.value)}
             placeholder="my:key"
             className="font-mono"
           />
-        </label>
+        </Field>
 
-        <label className="block">
-          <span className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
-            Value
-            {isBinary && <Tag>base64 — binary value</Tag>}
-            {loaded.data && <Tag>{loaded.data.size} bytes</Tag>}
-          </span>
+        <Field
+          label="Value"
+          hint={
+            <>
+              {isBinary && <Tag>base64 · binary</Tag>}
+              {loaded.data && <Tag>{loaded.data.size} bytes</Tag>}
+            </>
+          }
+        >
           <Textarea
-            rows={10}
+            rows={12}
             value={value}
             spellCheck={false}
             onChange={(event) => setValue(event.target.value)}
           />
-        </label>
+        </Field>
 
-        <label className="block max-w-xs">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-zinc-500">
-            Expiration TTL (seconds, optional)
-          </span>
-          <Input
-            value={ttl}
-            inputMode="numeric"
-            onChange={(event) => setTtl(event.target.value.replace(/\D/g, ""))}
-            placeholder="never"
-          />
-        </label>
+        <div className="max-w-xs">
+          <Field label="Expiration TTL (seconds, optional)">
+            <Input
+              value={ttl}
+              inputMode="numeric"
+              onChange={(event) => setTtl(event.target.value.replace(/\D/g, ""))}
+              placeholder="never"
+            />
+          </Field>
+        </div>
 
         {isBinary && (
           <p className="text-xs text-amber-700 dark:text-amber-500">
@@ -302,16 +330,25 @@ function ImportExport({
   });
 
   return (
-    <Card title="Import / export">
+    <Card
+      title="Import / export"
+      footer={
+        <>
+          Import accepts either a bare array or the{" "}
+          <code className="font-mono">{`{ "entries": [{ "key", "value" }] }`}</code> shape produced
+          by export.
+        </>
+      }
+    >
       <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <a
             href={`${baseUrl}/kv/${encodeURIComponent(binding)}/export`}
-            className="rounded-md bg-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
           >
             Export all as JSON
           </a>
-          <label className="cursor-pointer rounded-md bg-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
+          <label className="cursor-pointer rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
             Import JSON…
             <input
               type="file"
@@ -329,12 +366,6 @@ function ImportExport({
 
         {importJson.error && <ErrorNote title="Import failed" detail={importJson.error} />}
         {status && <p className="text-sm text-emerald-700 dark:text-emerald-400">{status}</p>}
-
-        <p className="text-xs text-zinc-500">
-          Import accepts either a bare array or the{" "}
-          <code className="font-mono">{`{ "entries": [{ "key", "value" }] }`}</code> shape produced
-          by export.
-        </p>
       </div>
     </Card>
   );

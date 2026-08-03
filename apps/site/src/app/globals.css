@@ -1,16 +1,13 @@
 @import "tailwindcss";
 
-/* Tailwind v4 skips node_modules; the shared UI package must be registered. */
+/*
+ * Tailwind v4 skips node_modules; the shared UI package must be registered.
+ * From apps/site/src/app: ../ src, ../../ site, ../../../ apps, ../../../../ root.
+ */
 @source "../../../../packages/ui/src";
 
-@theme {
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
-}
-
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
+/* Same Cloudflare-shaped tokens the bundled dashboard uses. */
+@import "../../../../packages/ui/src/theme.css";
 
 @media (prefers-color-scheme: dark) {
   html {
