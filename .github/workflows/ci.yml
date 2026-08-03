@@ -27,8 +27,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build core
+        run: pnpm --filter @local-cf/core build
+
+      - name: Build sidecar
+        run: pnpm --filter @local-cf/sidecar build
+
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm --filter '!@local-cf/sidecar' -r typecheck
 
       - name: Build
-        run: pnpm build:all
+        run: pnpm --filter '!@local-cf/sidecar' -r build
