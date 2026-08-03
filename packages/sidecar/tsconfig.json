@@ -1,6 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "paths": {
+      "@local-cf/core": ["../core/dist/index.d.ts"],
+      "@local-cf/core/*": ["../core/dist/*"]
+    },
     "outDir": "dist/types",
     "rootDir": "src",
     "lib": ["ES2022"],
