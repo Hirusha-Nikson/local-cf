@@ -38,6 +38,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # @local-cf/ui imports types from @local-cf/sidecar's build output.
+      - name: Build workspace packages
+        run: pnpm build
+
       - name: Build site (OpenNext)
         run: pnpm --filter @local-cf/site cf:build
 
