@@ -1,6 +1,6 @@
 {
   "name": "local-cf",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "type": "module",
   "description": "A local-first studio for Cloudflare Workers: browse and edit the exact D1/KV/R2/DO/Queues your worker is using, offline.",
   "license": "MIT",
@@ -38,13 +38,13 @@
     "start": "node ./dist/bin.js"
   },
   "dependencies": {
-    "@local-cf/core": "workspace:*",
     "commander": "^13.0.0",
     "esbuild": "^0.24.2",
     "miniflare": "^4.20250109.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
+    "@local-cf/core": "workspace:*",
     "@local-cf/dashboard": "workspace:*",
     "@local-cf/sidecar": "workspace:*",
     "@types/node": "^22.10.7",

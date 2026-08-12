@@ -22,7 +22,13 @@ import { createBridge } from "./bridge.js";
 import { bundleWorker } from "./bundler.js";
 import { LogBuffer, StudioLog } from "./log-buffer.js";
 
-export const VERSION = "0.1.0";
+/**
+ * Injected from package.json at build time by build.mjs, so `--version`, the
+ * startup banner and StudioMeta can never drift from the published version.
+ */
+declare const __LOCAL_CF_VERSION__: string;
+
+export const VERSION = __LOCAL_CF_VERSION__;
 
 export interface StudioOptions {
   cwd: string;

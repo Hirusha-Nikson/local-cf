@@ -1,9 +1,11 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, readFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { build } from "esbuild";
 
 const SIDECAR_BUNDLE = "../sidecar/dist/sidecar.js";
 const DASHBOARD_EXPORT = "../dashboard/out";
+
+const { version } = JSON.parse(await readFile("package.json", "utf8"));
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
@@ -23,6 +25,9 @@ await build({
   // UMD build — its dynamic `require`s cannot survive an ESM bundle.
   mainFields: ["module", "main"],
   external: ["miniflare", "esbuild", "commander", "picocolors"],
+  // Single source of truth for the version: package.json. src/studio.ts
+  // declares this identifier rather than hardcoding a string.
+  define: { __LOCAL_CF_VERSION__: JSON.stringify(version) },
   // No `banner` here: esbuild preserves the hashbang already on src/bin.ts,
   // and adding another produces a syntax error on line 2.
   logLevel: "info",
