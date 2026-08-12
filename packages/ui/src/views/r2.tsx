@@ -9,6 +9,7 @@ import {
   Empty,
   ErrorNote,
   Input,
+  SkeletonTable,
   SplitView,
   Spinner,
   Tag,
@@ -137,7 +138,7 @@ export function R2View() {
         }
       >
         {objects.loading ? (
-          <Empty>Loading objects…</Empty>
+          <SkeletonTable columns={5} rows={8} />
         ) : objects.error ? (
           <div className="p-4">
             <ErrorNote title="Could not list objects" detail={objects.error} />
@@ -148,20 +149,20 @@ export function R2View() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b hairline surface-sunken">
-                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                <tr>
+                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
                     Key
                   </th>
-                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
                     Size
                   </th>
-                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
                     Type
                   </th>
-                  <th scope="col" className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
                     Uploaded
                   </th>
-                  <th scope="col" className="px-4 py-2">
+                  <th scope="col" className="border-b px-4 py-2 hairline surface-sunken">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>

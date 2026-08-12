@@ -17,10 +17,3 @@ html,
 body {
   height: 100%;
 }
-
-/* The studio is a tool, not a document: follow the OS, no theme switcher. */
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-}

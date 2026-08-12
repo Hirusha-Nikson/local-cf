@@ -9,8 +9,3 @@
 /* Same Cloudflare-shaped tokens the bundled dashboard uses. */
 @import "../../../../packages/ui/src/theme.css";
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-}

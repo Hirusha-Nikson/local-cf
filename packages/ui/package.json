@@ -6,7 +6,7 @@
   "description": "React components shared between the bundled offline dashboard and the hosted site.",
   "exports": {
     ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css",
+    "./theme.css": "./src/theme.css",
     "./*": "./src/*"
   },
   "scripts": {

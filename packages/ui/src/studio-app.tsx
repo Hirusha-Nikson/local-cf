@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { cx, ModeBadge } from "./components/primitives";
+import { ThemeToggle } from "./components/theme-toggle";
 import { StudioProvider, useStudio } from "./studio-context";
 import { D1View } from "./views/d1";
 import { DurableObjectsView } from "./views/durable-objects";
@@ -179,13 +180,13 @@ function Sidebar({
 
             <aside
                 className={cx(
-                    "fixed inset-y-0 left-0 z-30 flex w-60 shrink-0 flex-col border-r hairline",
-                    "transition-transform md:static md:translate-x-0",
+                    "fixed inset-y-0 left-0 z-30 flex h-screen w-60 shrink-0 flex-col border-r hairline",
+                    "transition-transform md:static md:h-full md:translate-x-0",
                     open ? "translate-x-0" : "-translate-x-full",
                 )}
                 style={{ background: "var(--surface-sidebar)" }}
             >
-                <div className="flex h-12 items-center gap-2 border-b px-4 hairline">
+                <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4 hairline">
                     <span className="grid size-6 shrink-0 place-items-center rounded bg-orange-500 text-[10px] font-bold text-white">
                         cf
                     </span>
@@ -194,7 +195,7 @@ function Sidebar({
                     </span>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto p-2">
+                <nav className="min-h-0 flex-1 overflow-y-auto p-2">
                     {SECTIONS.map((section) => (
                         <div key={section.label ?? "root"} className="mb-1">
                             {section.label && (
@@ -218,7 +219,7 @@ function Sidebar({
                                         }}
                                         aria-current={isActive ? "page" : undefined}
                                         className={cx(
-                                            "group relative flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+                                            "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
                                             isActive
                                                 ? "bg-orange-50 font-medium text-orange-700 dark:bg-orange-500/10 dark:text-orange-400"
                                                 : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
@@ -244,7 +245,7 @@ function Sidebar({
                     ))}
                 </nav>
 
-                <p className="border-t px-4 py-2.5 text-[11px] text-zinc-500 hairline">
+                <p className="shrink-0 border-t px-4 py-2.5 text-[11px] text-zinc-500 hairline">
                     Local only · nothing leaves your machine
                 </p>
             </aside>
@@ -266,12 +267,12 @@ function Chrome() {
     }
 
     return (
-        <div className="flex min-h-screen text-zinc-900 dark:text-zinc-100">
+        <div className="flex h-screen overflow-hidden text-zinc-900 dark:text-zinc-100">
             <Sidebar active={tab} onSelect={setTab} counts={counts} open={navOpen} onClose={() => setNavOpen(false)} />
 
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <header
-                    className="sticky top-0 z-10 flex h-12 items-center gap-3 border-b px-4 hairline"
+                    className="flex h-12 shrink-0 items-center gap-3 border-b px-4 hairline"
                     style={{ background: "var(--surface-raised)" }}
                 >
                     <button
@@ -312,14 +313,24 @@ function Chrome() {
                         />
                         {syncing ? "Syncing" : "Refresh"}
                     </button>
+
+                    <ThemeToggle />
                 </header>
 
-                <div className="border-b px-4 py-4 hairline md:px-6" style={{ background: "var(--surface-raised)" }}>
+                <div
+                    className="shrink-0 border-b px-4 py-4 hairline md:px-6"
+                    style={{ background: "var(--surface-raised)" }}
+                >
+                    <nav aria-label="Breadcrumb" className="mb-1.5 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>{meta?.workerName ?? "local-cf"}</span>
+                        <Icon path="M6 3.5 10 8l-4 4.5" className="size-3 shrink-0 text-zinc-400 dark:text-zinc-600" />
+                        <span className="font-medium text-zinc-700 dark:text-zinc-300">{active.label}</span>
+                    </nav>
                     <h1 className="text-lg font-semibold tracking-tight">{active.title}</h1>
                     <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{active.description}</p>
                 </div>
 
-                <main className="min-w-0 flex-1">{active.render()}</main>
+                <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{active.render()}</main>
             </div>
         </div>
     );

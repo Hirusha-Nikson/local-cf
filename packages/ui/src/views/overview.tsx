@@ -9,6 +9,8 @@ import {
   Empty,
   FidelityBadge,
   ModeBadge,
+  Skeleton,
+  SkeletonList,
   Spinner,
   Tag,
   cx,
@@ -89,13 +91,14 @@ function describeTimeAgo(timestamp: number | null): string {
   return `${hours}h ago`;
 }
 
-function MetricCard({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
+/** Flat CF-style stat tile: small-caps label, big number, no shadow or gradient. */
+function StatTile({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm hairline dark:border-zinc-800 dark:bg-zinc-950/40">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+    <div className="rounded-lg border px-4 py-3 hairline surface">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50">
         {value}
       </p>
       {detail && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{detail}</p>}
@@ -149,17 +152,6 @@ function describeTarget(binding: AnyBinding): string {
     default:
       return binding.target ?? "—";
   }
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-lg border px-4 py-3 hairline surface">
-      <p className="text-xs font-medium text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-        {value}
-      </p>
-    </div>
-  );
 }
 
 function kindTone(fidelity: AnyBinding["fidelity"]): "success" | "warn" | "info" | "muted" {
@@ -245,7 +237,23 @@ export function OverviewView() {
   );
 
   if (loading) {
-    return <Empty>Connecting to local-cf…</Empty>;
+    return (
+      <div className="space-y-5 p-4 md:p-6">
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-5 w-24" />
+        </div>
+        <Skeleton className="h-4 w-full max-w-2xl" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-lg border px-4 py-3 hairline surface">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-2.5 h-7 w-14" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!meta) {
@@ -280,70 +288,18 @@ export function OverviewView() {
         </Callout>
       )}
 
-      <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(246,130,31,0.12),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.08),transparent_35%)]" />
-          <div className="relative p-5 md:p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
-              Local runtime dashboard
-            </p>
-            <div className="mt-3 flex flex-wrap items-start gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-3xl">
-                {meta.workerName}
-              </h1>
-              <ModeBadge mode={meta.mode} />
-            </div>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-              {mode.body}
-            </p>
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <ModeBadge mode={meta.mode} />
+          <Tag>{lastSyncText}</Tag>
+        </div>
+        <p className="max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">{mode.body}</p>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Tag>{storageBindings.length} storage bindings</Tag>
-              <Tag>{browsableBindings.length} browsable now</Tag>
-              <Tag>{variableBindings.length} vars</Tag>
-              <Tag>{lastSyncText}</Tag>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard label="Bindings" value={storageBindings.length} detail="declared in wrangler config" />
-              <MetricCard label="Live" value={fidelityCounts.live} detail="same runtime state" />
-              <MetricCard label="Browsable" value={browsableBindings.length} detail="ready to inspect now" />
-              <MetricCard label="Vars" value={variableBindings.length} detail="config values only" />
-            </div>
-          </div>
-        </Card>
-
-        <div className="space-y-4">
-          <Card title="Mode snapshot">
-            <div className="space-y-3 p-4 text-sm text-zinc-600 dark:text-zinc-300">
-              <p>{mode.body}</p>
-              <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-                  <dt className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    Config
-                  </dt>
-                  <dd className="mt-1 break-all font-mono text-xs text-zinc-800 dark:text-zinc-200">
-                    {meta.configPath ?? "—"}
-                  </dd>
-                </div>
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-                  <dt className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    Persist root
-                  </dt>
-                  <dd className="mt-1 break-all font-mono text-xs text-zinc-800 dark:text-zinc-200">
-                    {meta.persistRoot ?? "Remote mode uses Cloudflare storage"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </Card>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
-            <MetricCard label="Live writes" value={fidelityCounts.live} detail="fully shared with the worker" />
-            <MetricCard label="On disk" value={fidelityCounts.disk} detail="attached process persistence" />
-            <MetricCard label="Remote" value={fidelityCounts.remote} detail="Cloudflare REST API backed" />
-            <MetricCard label="Unavailable" value={fidelityCounts.unsupported} detail="not browsable in this mode" />
-          </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Bindings" value={storageBindings.length} detail="declared in wrangler config" />
+          <StatTile label="Live" value={fidelityCounts.live} detail="same runtime state" />
+          <StatTile label="Browsable" value={browsableBindings.length} detail="ready to inspect now" />
+          <StatTile label="Vars" value={variableBindings.length} detail="config values only" />
         </div>
       </section>
 
@@ -416,7 +372,7 @@ export function OverviewView() {
 
           <Card title="Recent writes" actions={<Tag>{audit.data?.entries.length ?? 0} entries</Tag>}>
             {audit.loading ? (
-              <Empty>Loading audit log…</Empty>
+              <SkeletonList rows={4} />
             ) : (audit.data?.entries.length ?? 0) === 0 ? (
               <Empty>No writes recorded yet.</Empty>
             ) : (
@@ -435,6 +391,30 @@ export function OverviewView() {
           </Card>
         </div>
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile label="Live writes" value={fidelityCounts.live} detail="fully shared with the worker" />
+        <StatTile label="On disk" value={fidelityCounts.disk} detail="attached process persistence" />
+        <StatTile label="Remote" value={fidelityCounts.remote} detail="Cloudflare REST API backed" />
+        <StatTile label="Unavailable" value={fidelityCounts.unsupported} detail="not browsable in this mode" />
+      </div>
+
+      <Card title="Connection details">
+        <dl className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Config</dt>
+            <dd className="mt-1 break-all font-mono text-xs text-zinc-800 dark:text-zinc-200">
+              {meta.configPath ?? "—"}
+            </dd>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Persist root</dt>
+            <dd className="mt-1 break-all font-mono text-xs text-zinc-800 dark:text-zinc-200">
+              {meta.persistRoot ?? "Remote mode uses Cloudflare storage"}
+            </dd>
+          </div>
+        </dl>
+      </Card>
 
       {variableBindings.length > 0 && (
         <Card title={`Vars (${variableBindings.length})`}>

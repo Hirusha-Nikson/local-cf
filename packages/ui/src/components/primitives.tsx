@@ -3,6 +3,7 @@
 import type { BindingFidelity, StudioMode } from "@local-cf/core/types";
 import type {
   ButtonHTMLAttributes,
+  CSSProperties,
   InputHTMLAttributes,
   ReactNode,
   SelectHTMLAttributes,
@@ -142,6 +143,49 @@ export function Spinner({ className }: { className?: string }) {
         className,
       )}
     />
+  );
+}
+
+/** A single placeholder bar. Static (no pulse) under prefers-reduced-motion. */
+export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={style}
+      className={cx("block rounded bg-zinc-200 motion-safe:animate-pulse dark:bg-zinc-800", className)}
+    />
+  );
+}
+
+/** Stand-in for a short list (keys, tables, migrations) while it loads. */
+export function SkeletonList({ rows = 5 }: { rows?: number }) {
+  return (
+    <div role="status" aria-label="Loading" className="space-y-2.5 p-3">
+      {Array.from({ length: rows }).map((_, row) => (
+        <Skeleton key={row} className="h-3.5" style={{ width: `${55 + ((row * 17) % 35)}%` }} />
+      ))}
+    </div>
+  );
+}
+
+/** Stand-in for a DataTable while its first page of rows is still loading. */
+export function SkeletonTable({ columns = 4, rows = 6 }: { columns?: number; rows?: number }) {
+  return (
+    <div role="status" aria-label="Loading" className="p-3">
+      <table className="w-full border-collapse text-left text-sm">
+        <tbody>
+          {Array.from({ length: rows }).map((_, row) => (
+            <tr key={row} className="border-b last:border-0 hairline">
+              {Array.from({ length: columns }).map((_, col) => (
+                <td key={col} className="px-3 py-2">
+                  <Skeleton className="h-3.5" style={{ width: col === 0 ? "70%" : `${40 + ((row * 13 + col * 7) % 40)}%` }} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -331,12 +375,12 @@ export function DataTable({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-left text-sm">
         <thead>
-          <tr className="border-b hairline surface-sunken">
+          <tr>
             {columns.map((column) => (
               <th
                 key={column}
                 scope="col"
-                className="px-3 py-2 text-xs font-semibold whitespace-nowrap text-zinc-600 dark:text-zinc-400"
+                className="border-b px-3 py-2 text-xs font-semibold whitespace-nowrap text-zinc-600 hairline surface-sunken dark:text-zinc-400"
               >
                 {column}
               </th>
@@ -426,9 +470,9 @@ export function BindingList<T extends { binding: string; fidelity: BindingFideli
 /** Standard two-pane storage layout: binding picker on the left, detail right. */
 export function SplitView({ sidebar, children }: { sidebar: ReactNode; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 md:h-full md:grid-cols-[240px_minmax(0,1fr)]">
       <aside
-        className="border-b hairline md:sticky md:top-12 md:h-[calc(100vh-3rem)] md:overflow-y-auto md:border-b-0 md:border-r"
+        className="border-b hairline md:sticky md:top-0 md:h-full md:overflow-y-auto md:border-b-0 md:border-r"
         style={{ background: "var(--surface-raised)" }}
       >
         {sidebar}

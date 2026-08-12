@@ -10,6 +10,7 @@ import {
   ErrorNote,
   Field,
   Input,
+  SkeletonList,
   Spinner,
   Tag,
   Textarea,
@@ -58,9 +59,9 @@ export function KVView() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[220px_260px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 md:h-full md:grid-cols-[220px_260px_minmax(0,1fr)]">
       <aside
-        className="border-b hairline md:sticky md:top-12 md:h-[calc(100vh-3rem)] md:overflow-y-auto md:border-b-0 md:border-r"
+        className="border-b hairline md:sticky md:top-0 md:h-full md:overflow-y-auto md:border-b-0 md:border-r"
         style={{ background: "var(--surface-raised)" }}
       >
         <BindingList
@@ -75,7 +76,7 @@ export function KVView() {
       </aside>
 
       <section
-        className="flex min-h-0 flex-col border-b hairline md:sticky md:top-12 md:h-[calc(100vh-3rem)] md:border-b-0 md:border-r"
+        className="flex min-h-0 flex-col border-b hairline md:sticky md:top-0 md:h-full md:border-b-0 md:border-r"
         style={{ background: "var(--surface-raised)" }}
       >
         <div className="border-b p-2 hairline">
@@ -89,7 +90,7 @@ export function KVView() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {keys.loading ? (
-            <Empty>Loading keys…</Empty>
+            <SkeletonList rows={8} />
           ) : keys.error ? (
             <div className="p-3">
               <ErrorNote title="Could not list keys" detail={keys.error} />

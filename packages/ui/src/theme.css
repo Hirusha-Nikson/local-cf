@@ -14,6 +14,13 @@
  * Imported by both dashboard builds (offline export + hosted site).
  */
 
+/*
+ * Manual light/dark/system control (see theme.ts / theme-context.tsx): every
+ * `dark:` utility now targets this class instead of `prefers-color-scheme`
+ * directly, so a user's explicit choice can override the OS.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     /* Cloudflare brand orange, used sparingly: primary actions and active state. */
     --color-orange-50: #fff5eb;
@@ -66,15 +73,13 @@
     --border-strong: #d9d9d9;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --surface-page: #141414;
-        --surface-raised: #1d1d1d;
-        --surface-sunken: #232323;
-        --surface-sidebar: #1d1d1d;
-        --border-subtle: #2f2f2f;
-        --border-strong: #3a3a3a;
-    }
+:root.dark {
+    --surface-page: #141414;
+    --surface-raised: #1d1d1d;
+    --surface-sunken: #232323;
+    --surface-sidebar: #1d1d1d;
+    --border-subtle: #2f2f2f;
+    --border-strong: #3a3a3a;
 }
 
 @layer base {

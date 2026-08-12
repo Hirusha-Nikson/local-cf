@@ -10,6 +10,8 @@ import {
   DataTable,
   Empty,
   ErrorNote,
+  SkeletonList,
+  SkeletonTable,
   SplitView,
   Spinner,
   Tabs,
@@ -116,7 +118,7 @@ function TableBrowser({
     if (!table && tables.data?.tables[0]) setTable(tables.data.tables[0].name);
   }, [tables.data, table]);
 
-  if (tables.loading) return <Empty>Loading tables…</Empty>;
+  if (tables.loading) return <SkeletonList rows={6} />;
   if (tables.error) return <ErrorNote title="Could not list tables" detail={tables.error} />;
   if (!tables.data || tables.data.tables.length === 0) {
     return <Empty>This database has no tables yet. Apply a migration to create some.</Empty>;
@@ -193,7 +195,7 @@ function TableBrowser({
               <ErrorNote title="Query failed" detail={rows.error} />
             </div>
           ) : rows.loading ? (
-            <Empty>Loading rows…</Empty>
+            <SkeletonTable columns={Math.max(rows.data?.columns.length ?? 4, 4)} rows={8} />
           ) : (
             <DataTable
               columns={rows.data?.columns ?? []}
@@ -311,7 +313,7 @@ function Migrations({
     state.reload();
   });
 
-  if (state.loading) return <Empty>Loading migrations…</Empty>;
+  if (state.loading) return <SkeletonList rows={4} />;
   if (state.error) return <ErrorNote title="Could not read migrations" detail={state.error} />;
 
   const migrations = state.data?.migrations ?? [];
