@@ -7,10 +7,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { DEFAULT_API_BASE, createClient, unwrap, type StudioClient } from "./api";
+import { useInterval } from "./hooks";
 
 interface StudioContextValue {
   client: StudioClient;
@@ -18,6 +20,8 @@ interface StudioContextValue {
   meta: StudioMeta | null;
   error: string | null;
   loading: boolean;
+  syncing: boolean;
+  lastUpdatedAt: number | null;
   refresh: () => void;
 }
 
@@ -43,13 +47,22 @@ export function StudioProvider({
   const [meta, setMeta] = useState<StudioMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
+  const hasMeta = useRef(false);
 
   const refresh = useCallback(() => setNonce((value) => value + 1), []);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const backgroundRefresh = hasMeta.current;
+
+    if (backgroundRefresh) {
+      setSyncing(true);
+    } else {
+      setLoading(true);
+    }
 
     client.meta
       .$get()
@@ -57,11 +70,15 @@ export function StudioProvider({
       .then((value) => {
         if (cancelled) return;
         setMeta(value);
+        hasMeta.current = true;
+        setLastUpdatedAt(Date.now());
         setError(null);
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
-        setMeta(null);
+        if (!backgroundRefresh) {
+          setMeta(null);
+        }
         setError(
           cause instanceof Error
             ? cause.message
@@ -70,6 +87,7 @@ export function StudioProvider({
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+        if (!cancelled) setSyncing(false);
       });
 
     return () => {
@@ -77,9 +95,16 @@ export function StudioProvider({
     };
   }, [client, nonce]);
 
+  useInterval(() => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return;
+    }
+    refresh();
+  }, 10000);
+
   const value = useMemo(
-    () => ({ client, baseUrl, meta, error, loading, refresh }),
-    [client, baseUrl, meta, error, loading, refresh],
+    () => ({ client, baseUrl, meta, error, loading, syncing, lastUpdatedAt, refresh }),
+    [client, baseUrl, meta, error, loading, syncing, lastUpdatedAt, refresh],
   );
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;

@@ -1,29 +1,19 @@
 @import "tailwindcss";
 
 /*
- * Tailwind v4 discovers classes from the importing project only, and skips
- * node_modules. `@local-cf/ui` is a workspace symlink, so its sources have to be
- * registered explicitly or every shared component would render unstyled.
- */
-@source "../../../../ui/src";
+ * Tailwind v4 discovers classes from the importing project only, and skips
+ * node_modules. @local-cf/ui is a workspace symlink, so its sources have to be
+ * registered explicitly — every class in this app comes from there, so getting
+ * this path wrong emits a stylesheet with no utilities at all.
+ *
+ * From packages/dashboard/src/app: ../ src, ../../ dashboard, ../../../ packages.
+ */
+@source "../../../ui/src";
 
-@theme {
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
-}
+/* Cloudflare-shaped tokens, shared with the hosted site. */
+@import "../../../ui/src/theme.css";
 
 html,
 body {
   height: 100%;
-}
-
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* The studio is a tool, not a document: follow the OS, no theme switcher. */
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
 }

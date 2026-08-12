@@ -3,7 +3,7 @@
 import type { AuditEntry } from "@local-cf/core/types";
 import { useState } from "react";
 import { unwrap } from "../api";
-import { Button, Card, Empty, ErrorNote, Input, Spinner, Tag } from "../components/primitives";
+import { Button, Card, Empty, ErrorNote, Input, SkeletonList, Spinner, Tag } from "../components/primitives";
 import { useAction, useAsync } from "../hooks";
 import { useStudio } from "../studio-context";
 
@@ -119,7 +119,7 @@ export function OperationsView() {
             )}
 
             {snapshots.loading ? (
-              <Empty>Loading…</Empty>
+              <SkeletonList rows={3} />
             ) : (snapshots.data?.snapshots.length ?? 0) === 0 ? (
               <Empty>No snapshots yet.</Empty>
             ) : (
@@ -170,7 +170,7 @@ export function OperationsView() {
         )}
 
         {audit.loading ? (
-          <Empty>Loading…</Empty>
+          <SkeletonList rows={5} />
         ) : (audit.data?.entries.length ?? 0) === 0 ? (
           <Empty>
             No writes recorded yet. Every change made through this dashboard is logged here.

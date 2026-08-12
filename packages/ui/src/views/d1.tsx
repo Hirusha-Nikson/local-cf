@@ -10,9 +10,14 @@ import {
   DataTable,
   Empty,
   ErrorNote,
+  SkeletonList,
+  SkeletonTable,
+  SplitView,
   Spinner,
+  Tabs,
   Tag,
   Textarea,
+  cx,
 } from "../components/primitives";
 import { useAction, useAsync } from "../hooks";
 import { useBindings, useStudio } from "../studio-context";
@@ -32,6 +37,12 @@ interface QueryResult {
 
 type Panel = "browse" | "query" | "migrations";
 
+const PANELS: { id: Panel; label: string }[] = [
+  { id: "browse", label: "Tables" },
+  { id: "query", label: "SQL editor" },
+  { id: "migrations", label: "Migrations" },
+];
+
 export function D1View() {
   const { client, baseUrl } = useStudio();
   const bindings = useBindings("d1");
@@ -47,43 +58,26 @@ export function D1View() {
   }
 
   return (
-    <div className="grid h-full grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
-      <aside className="border-b border-zinc-200 md:border-b-0 md:border-r dark:border-zinc-800">
+    <SplitView
+      sidebar={
         <BindingList
           bindings={bindings}
           selected={binding}
-          onSelect={(next) => setBinding(next)}
+          onSelect={setBinding}
           describe={(item) => item.databaseName}
         />
-      </aside>
+      }
+    >
+      <Tabs tabs={PANELS} active={panel} onSelect={setPanel} />
 
-      <div className="min-w-0 space-y-4 p-4">
-        <nav className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
-          {(["browse", "query", "migrations"] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setPanel(item)}
-              className={
-                panel === item
-                  ? "border-b-2 border-orange-500 px-3 py-2 text-sm font-medium text-orange-600 dark:text-orange-400"
-                  : "border-b-2 border-transparent px-3 py-2 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-              }
-            >
-              {item === "browse" ? "Tables" : item === "query" ? "SQL editor" : "Migrations"}
-            </button>
-          ))}
-        </nav>
-
-        {binding && panel === "browse" && (
-          <TableBrowser key={`${binding}-browse`} binding={binding} baseUrl={baseUrl} client={client} />
-        )}
-        {binding && panel === "query" && <SqlEditor key={`${binding}-sql`} binding={binding} client={client} />}
-        {binding && panel === "migrations" && (
-          <Migrations key={`${binding}-mig`} binding={binding} client={client} />
-        )}
-      </div>
-    </div>
+      {binding && panel === "browse" && (
+        <TableBrowser key={`${binding}-browse`} binding={binding} baseUrl={baseUrl} client={client} />
+      )}
+      {binding && panel === "query" && <SqlEditor key={`${binding}-sql`} binding={binding} client={client} />}
+      {binding && panel === "migrations" && (
+        <Migrations key={`${binding}-mig`} binding={binding} client={client} />
+      )}
+    </SplitView>
   );
 }
 
@@ -124,16 +118,17 @@ function TableBrowser({
     if (!table && tables.data?.tables[0]) setTable(tables.data.tables[0].name);
   }, [tables.data, table]);
 
-  if (tables.loading) return <Empty>Loading tables…</Empty>;
+  if (tables.loading) return <SkeletonList rows={6} />;
   if (tables.error) return <ErrorNote title="Could not list tables" detail={tables.error} />;
   if (!tables.data || tables.data.tables.length === 0) {
     return <Empty>This database has no tables yet. Apply a migration to create some.</Empty>;
   }
 
   const total = rows.data?.total ?? 0;
+  const showing = rows.data?.rows.length ?? 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
         {tables.data.tables.map((item) => (
           <button
@@ -143,11 +138,12 @@ function TableBrowser({
               setTable(item.name);
               setOffset(0);
             }}
-            className={
+            className={cx(
+              "rounded-md border px-2.5 py-1 font-mono text-xs transition-colors",
               item.name === table
-                ? "rounded-md bg-orange-500/10 px-2.5 py-1 font-mono text-xs text-orange-700 dark:text-orange-400"
-                : "rounded-md bg-zinc-100 px-2.5 py-1 font-mono text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-            }
+                ? "border-orange-300 bg-orange-50 font-medium text-orange-800 dark:border-orange-900/60 dark:bg-orange-500/10 dark:text-orange-400"
+                : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
+            )}
           >
             {item.name}
           </button>
@@ -166,19 +162,21 @@ function TableBrowser({
             <>
               <a
                 href={`${baseUrl}/d1/${encodeURIComponent(binding)}/export?table=${encodeURIComponent(table)}`}
-                className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
               >
                 Export CSV
               </a>
               <Button
-                variant="ghost"
+                variant="secondary"
+                className="px-2 py-1 text-xs"
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - pageSize))}
               >
                 Prev
               </Button>
               <Button
-                variant="ghost"
+                variant="secondary"
+                className="px-2 py-1 text-xs"
                 disabled={offset + pageSize >= total}
                 onClick={() => setOffset(offset + pageSize)}
               >
@@ -186,13 +184,18 @@ function TableBrowser({
               </Button>
             </>
           }
+          footer={
+            showing > 0
+              ? `Rows ${offset + 1}–${offset + showing} of ${total}`
+              : undefined
+          }
         >
           {rows.error ? (
             <div className="p-4">
               <ErrorNote title="Query failed" detail={rows.error} />
             </div>
           ) : rows.loading ? (
-            <Empty>Loading rows…</Empty>
+            <SkeletonTable columns={Math.max(rows.data?.columns.length ?? 4, 4)} rows={8} />
           ) : (
             <DataTable
               columns={rows.data?.columns ?? []}
@@ -227,7 +230,7 @@ function SqlEditor({
   });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Card
         title="SQL"
         actions={
@@ -236,22 +239,28 @@ function SqlEditor({
             Run
           </Button>
         }
+        footer={
+          <>
+            One statement per run — use the Migrations tab for multi-statement scripts. Press{" "}
+            <kbd className="rounded border border-zinc-300 px-1 font-mono dark:border-zinc-600">
+              Ctrl/⌘ + Enter
+            </kbd>{" "}
+            to execute.
+          </>
+        }
       >
         <div className="p-3">
           <Textarea
-            rows={7}
+            rows={8}
             value={sql}
             spellCheck={false}
+            aria-label="SQL query"
             onChange={(event) => setSql(event.target.value)}
             onKeyDown={(event) => {
               // Ctrl/Cmd+Enter is the near-universal "execute" chord in SQL tools.
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") run.run();
             }}
           />
-          <p className="mt-2 text-xs text-zinc-500">
-            One statement per run. Use the Migrations tab for multi-statement scripts.
-            Press <kbd className="font-mono">Ctrl/⌘ + Enter</kbd> to execute.
-          </p>
         </div>
       </Card>
 
@@ -304,52 +313,59 @@ function Migrations({
     state.reload();
   });
 
-  if (state.loading) return <Empty>Loading migrations…</Empty>;
+  if (state.loading) return <SkeletonList rows={4} />;
   if (state.error) return <ErrorNote title="Could not read migrations" detail={state.error} />;
 
   const migrations = state.data?.migrations ?? [];
+  const pending = migrations.filter((migration) => !migration.applied).length;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {apply.error && <ErrorNote title="Migration failed" detail={apply.error} />}
+
       <Card
         title="Migrations"
-        actions={<Tag>{state.data?.migrationsDir}/</Tag>}
+        actions={
+          <>
+            <Tag>{state.data?.migrationsDir}/</Tag>
+            {pending > 0 && <Tag>{pending} pending</Tag>}
+          </>
+        }
+        footer="Applied migrations are tracked in the d1_migrations table, the same convention Wrangler uses."
       >
         {migrations.length === 0 ? (
           <Empty>
             No .sql files found in {state.data?.migrationsDir}/. Create one to get started.
           </Empty>
         ) : (
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+          <ul className="divide-y hairline">
             {migrations.map((migration) => (
               <li
                 key={migration.name}
                 className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
               >
-                <span className="flex items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2.5">
                   <span
-                    className={
-                      migration.applied
-                        ? "size-2 rounded-full bg-emerald-500"
-                        : "size-2 rounded-full bg-zinc-300 dark:bg-zinc-600"
-                    }
+                    aria-hidden="true"
+                    className={cx(
+                      "size-2 shrink-0 rounded-full",
+                      migration.applied ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600",
+                    )}
                   />
-                  <span className="font-mono text-sm">{migration.name}</span>
+                  <span className="truncate font-mono text-sm">{migration.name}</span>
                 </span>
-                <span className="flex items-center gap-3">
-                  {migration.applied ? (
-                    <span className="text-xs text-zinc-500">applied {migration.appliedAt}</span>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      disabled={apply.pending}
-                      onClick={() => apply.run(migration.name)}
-                    >
-                      Apply
-                    </Button>
-                  )}
-                </span>
+                {migration.applied ? (
+                  <span className="text-xs text-zinc-500">applied {migration.appliedAt}</span>
+                ) : (
+                  <Button
+                    variant="primary"
+                    className="px-2.5 py-1 text-xs"
+                    disabled={apply.pending}
+                    onClick={() => apply.run(migration.name)}
+                  >
+                    Apply
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

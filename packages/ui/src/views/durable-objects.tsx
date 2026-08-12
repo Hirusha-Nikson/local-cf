@@ -5,11 +5,14 @@ import { unwrap } from "../api";
 import {
   BindingList,
   Button,
+  Callout,
   Card,
   Empty,
   ErrorNote,
+  Field,
   Input,
   Select,
+  SplitView,
   Spinner,
   Tag,
 } from "../components/primitives";
@@ -21,6 +24,14 @@ interface FetchResult {
   durationMs: number;
   headers: Record<string, string>;
   body: string;
+}
+
+function prettyJson(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
 }
 
 /**
@@ -85,114 +96,121 @@ export function DurableObjectsView() {
   const unavailable = selected?.fidelity === "unsupported";
 
   return (
-    <div className="grid h-full grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
-      <aside className="border-b border-zinc-200 md:border-b-0 md:border-r dark:border-zinc-800">
+    <SplitView
+      sidebar={
         <BindingList
           bindings={bindings}
           selected={binding}
           onSelect={setBinding}
           describe={(item) => item.className}
         />
-      </aside>
+      }
+    >
+      {unavailable && (
+        <Callout
+          tone="warn"
+          title={`Durable Objects are not reachable in ${meta?.mode === "attach" ? "attach" : "remote"} mode`}
+        >
+          {selected?.note}
+        </Callout>
+      )}
 
-      <div className="min-w-0 space-y-4 p-4">
-        {unavailable && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
-            <p className="font-medium text-amber-900 dark:text-amber-300">
-              Durable Objects are not reachable in {meta?.mode === "attach" ? "attach" : "remote"} mode
-            </p>
-            <p className="mt-1 text-amber-800 dark:text-amber-400">{selected?.note}</p>
-          </div>
-        )}
-
-        <Card title="Instance">
-          <div className="space-y-3 p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="min-w-48 flex-1">
-                <span className="mb-1 block text-xs uppercase tracking-wide text-zinc-500">
-                  Name (idFromName)
-                </span>
+      <Card title="Instance">
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-48 flex-1">
+              <Field label="Name (idFromName)">
                 <Input
                   className="font-mono"
                   value={instanceName}
                   onChange={(event) => setInstanceName(event.target.value)}
                 />
-              </label>
-              <Button disabled={unavailable || resolve.pending} onClick={() => resolve.run()}>
-                Resolve id
-              </Button>
+              </Field>
             </div>
-            {resolvedId && (
-              <p className="break-all font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                {resolvedId}
-              </p>
-            )}
-            {resolve.error && <ErrorNote title="Could not resolve" detail={resolve.error} />}
-          </div>
-        </Card>
-
-        <Card
-          title="Send a request to this instance"
-          actions={
-            <Button variant="primary" disabled={unavailable || send.pending} onClick={() => send.run()}>
-              {send.pending ? <Spinner /> : null}
-              Send
+            <Button disabled={unavailable || resolve.pending} onClick={() => resolve.run()}>
+              Resolve id
             </Button>
-          }
-        >
-          <div className="space-y-3 p-4">
-            <div className="flex flex-wrap gap-3">
-              <Select value={method} onChange={(event) => setMethod(event.target.value)}>
-                {["GET", "POST", "PUT", "DELETE"].map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </Select>
-              <Input
-                className="min-w-48 flex-1 font-mono"
-                value={path}
-                onChange={(event) => setPath(event.target.value)}
-                placeholder="/debug"
-              />
-            </div>
+          </div>
 
-            {method !== "GET" && method !== "HEAD" && (
+          {resolvedId && (
+            <p className="rounded-md border px-3 py-2 font-mono text-xs break-all hairline surface-sunken">
+              {resolvedId}
+            </p>
+          )}
+          {resolve.error && <ErrorNote title="Could not resolve" detail={resolve.error} />}
+        </div>
+      </Card>
+
+      <Card
+        title="Send a request to this instance"
+        actions={
+          <Button variant="primary" disabled={unavailable || send.pending} onClick={() => send.run()}>
+            {send.pending ? <Spinner /> : null}
+            Send
+          </Button>
+        }
+        footer={
+          <>
+            The runtime has no API for reading another Durable Object&rsquo;s storage, so this
+            inspector talks to the instance instead. Give your class a route like{" "}
+            <code className="font-mono">/debug</code> that dumps{" "}
+            <code className="font-mono">ctx.storage.list()</code> and it becomes browsable here.
+          </>
+        }
+      >
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap gap-2">
+            <Select
+              value={method}
+              aria-label="HTTP method"
+              onChange={(event) => setMethod(event.target.value)}
+            >
+              {["GET", "POST", "PUT", "DELETE"].map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </Select>
+            <Input
+              className="min-w-48 flex-1 font-mono"
+              aria-label="Request path"
+              value={path}
+              onChange={(event) => setPath(event.target.value)}
+              placeholder="/debug"
+            />
+          </div>
+
+          {method !== "GET" && method !== "HEAD" && (
+            <Field label="Request body">
               <Input
                 className="font-mono"
                 value={requestBody}
                 onChange={(event) => setRequestBody(event.target.value)}
-                placeholder="Request body"
               />
-            )}
+            </Field>
+          )}
 
-            <p className="text-xs text-zinc-500">
-              The runtime has no API for reading another Durable Object&rsquo;s storage, so this
-              inspector talks to the instance instead. Give your class a route like{" "}
-              <code className="font-mono">/debug</code> that dumps{" "}
-              <code className="font-mono">ctx.storage.list()</code> and it becomes browsable here.
-            </p>
+          {send.error && <ErrorNote title="Request failed" detail={send.error} />}
 
-            {send.error && <ErrorNote title="Request failed" detail={send.error} />}
-
-            {result && (
-              <div className="space-y-2">
-                <p className="flex items-center gap-2">
-                  <Tag>{result.status}</Tag>
-                  <Tag>{result.durationMs}ms</Tag>
-                </p>
-                <pre className="max-h-96 overflow-auto rounded-md bg-zinc-100 p-3 font-mono text-xs dark:bg-zinc-900">
-                  {(() => {
-                    try {
-                      return JSON.stringify(JSON.parse(result.body), null, 2);
-                    } catch {
-                      return result.body;
-                    }
-                  })()}
-                </pre>
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-    </div>
+          {result && (
+            <div className="space-y-2">
+              <p className="flex flex-wrap items-center gap-2">
+                <Tag
+                  className={
+                    result.status < 400
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-400"
+                      : "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400"
+                  }
+                >
+                  {result.status}
+                </Tag>
+                <Tag>{result.durationMs}ms</Tag>
+              </p>
+              <pre className="max-h-96 overflow-auto rounded-md border p-3 font-mono text-xs hairline surface-sunken">
+                {prettyJson(result.body)}
+              </pre>
+            </div>
+          )}
+        </div>
+      </Card>
+    </SplitView>
   );
 }

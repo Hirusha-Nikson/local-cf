@@ -7,6 +7,7 @@
     "node": ">=20.11.0"
   },
   "scripts": {
+    "pretypecheck": "pnpm --filter @local-cf/core build",
     "build": "pnpm -r --filter \"./packages/**\" build",
     "build:all": "pnpm -r build",
     "build:site": "pnpm --filter @local-cf/site build",

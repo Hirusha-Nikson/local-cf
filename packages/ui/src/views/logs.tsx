@@ -3,13 +3,20 @@
 import type { LogEntry } from "@local-cf/core/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { unwrap } from "../api";
-import { Button, Card, Empty, Input } from "../components/primitives";
+import { Button, Card, Empty, Input, cx } from "../components/primitives";
 import { useInterval } from "../hooks";
 import { useStudio } from "../studio-context";
 
 const LEVEL_STYLE: Record<LogEntry["level"], string> = {
   debug: "text-zinc-500",
   info: "text-zinc-700 dark:text-zinc-300",
+  warn: "text-amber-600 dark:text-amber-400",
+  error: "text-red-600 dark:text-red-400",
+};
+
+const LEVEL_CHIP: Record<LogEntry["level"], string> = {
+  debug: "text-zinc-500",
+  info: "text-sky-600 dark:text-sky-400",
   warn: "text-amber-600 dark:text-amber-400",
   error: "text-red-600 dark:text-red-400",
 };
@@ -64,14 +71,33 @@ export function LogsView() {
     : entries;
 
   return (
-    <div className="p-4">
+    <div className="p-4 md:p-6">
       <Card
-        title="Logs"
+        title={
+          <span className="flex items-center gap-2">
+            Logs
+            <span
+              className={cx(
+                "inline-flex items-center gap-1.5 text-xs font-normal",
+                paused ? "text-zinc-500" : "text-emerald-600 dark:text-emerald-400",
+              )}
+            >
+              <span
+                className={cx(
+                  "size-1.5 rounded-full",
+                  paused ? "bg-zinc-400" : "animate-pulse bg-emerald-500",
+                )}
+              />
+              {paused ? "Paused" : "Live"}
+            </span>
+          </span>
+        }
         actions={
           <>
             <Input
               className="w-48"
               placeholder="Filter…"
+              aria-label="Filter log messages"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
             />
@@ -83,6 +109,7 @@ export function LogsView() {
             </Button>
           </>
         }
+        footer={`${visible.length} of ${entries.length} lines${filter ? " (filtered)" : ""}`}
       >
         {error && (
           <p className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
@@ -91,23 +118,18 @@ export function LogsView() {
         )}
 
         {visible.length === 0 ? (
-          <Empty>
-            No log output yet. Make a request to your worker, or send a queue message.
-          </Empty>
+          <Empty>No log output yet. Make a request to your worker, or send a queue message.</Empty>
         ) : (
-          <div className="max-h-[calc(100vh-14rem)] overflow-auto px-4 py-2 font-mono text-xs leading-relaxed">
+          <div className="max-h-[calc(100vh-18rem)] overflow-auto px-4 py-2 font-mono text-xs leading-relaxed">
             {visible.map((entry) => (
-              <p key={entry.seq} className="flex gap-3">
-                <span className="shrink-0 text-zinc-400 dark:text-zinc-600">
+              <p key={entry.seq} className="flex gap-3 py-px">
+                <span className="w-20 shrink-0 text-zinc-400 dark:text-zinc-600">
                   {new Date(entry.ts).toLocaleTimeString()}
                 </span>
-                <span
-                  className={`shrink-0 uppercase ${LEVEL_STYLE[entry.level]}`}
-                  style={{ width: "3.5rem" }}
-                >
+                <span className={cx("w-12 shrink-0 uppercase", LEVEL_CHIP[entry.level])}>
                   {entry.level}
                 </span>
-                <span className={`whitespace-pre-wrap break-all ${LEVEL_STYLE[entry.level]}`}>
+                <span className={cx("break-all whitespace-pre-wrap", LEVEL_STYLE[entry.level])}>
                   {entry.message}
                 </span>
               </p>
