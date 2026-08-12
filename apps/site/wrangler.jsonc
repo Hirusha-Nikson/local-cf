@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "local-cf-site",
+  // Default (no --env) is the staging worker, deployed from `main`.
+  "name": "local-cf-site-staging",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-03-25",
   // `global_fetch_strictly_public` is required by OpenNext so that fetches to
@@ -9,12 +10,19 @@
 
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
 
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
+
+  // Deployed with `--env production` from the `release` branch.
+  "env": {
+    "production": {
+      "name": "local-cf-site",
+    },
+  },
 
   // For ISR at scale, add an R2 bucket bound as NEXT_INC_CACHE_R2_BUCKET and a
   // WORKER_SELF_REFERENCE service binding, then switch open-next.config.ts to

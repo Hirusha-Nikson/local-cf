@@ -2,21 +2,26 @@ name: Deploy site
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - release
     paths:
       - "apps/site/**"
-      - "packages/core/**"
       - "packages/ui/**"
-      - "packages/sidecar/**"
       - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "package.json"
-  workflow_dispatch:
+      - ".github/workflows/deploy-site.yml"
+
+concurrency:
+  group: deploy-site-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    name: Build and deploy (${{ github.ref_name == 'release' && 'production' || 'staging' }})
     runs-on: ubuntu-latest
-
+    environment: ${{ github.ref_name == 'release' && 'production' || 'staging' }}
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,11 +38,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build site
+      # @local-cf/ui imports types from @local-cf/sidecar's build output.
+      - name: Build workspace packages
+        run: pnpm build
+
+      - name: Build site (OpenNext)
         run: pnpm --filter @local-cf/site cf:build
 
-      - name: Deploy to Cloudflare
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Deploy to staging (main)
+        if: github.ref_name == 'main'
         run: pnpm --filter @local-cf/site cf:deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to production (release)
+        if: github.ref_name == 'release'
+        run: pnpm --filter @local-cf/site cf:deploy:production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
