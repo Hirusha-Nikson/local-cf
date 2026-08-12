@@ -1,6 +1,6 @@
 {
   "name": "local-cf",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "description": "A local-first studio for Cloudflare Workers: browse and edit the exact D1/KV/R2/DO/Queues your worker is using, offline.",
   "license": "MIT",

@@ -1,3 +1,4 @@
+import { dirname, resolve } from "node:path";
 import type { Json, MiniflareOptions, Request as MiniflareRequest, WorkerOptions } from "miniflare";
 import { persistPaths } from "./paths.js";
 import type { NormalizedWranglerConfig, StudioMode } from "./types.js";
@@ -113,11 +114,22 @@ export function buildUserWorkerOptions(
     };
   }
 
+  /**
+   * One explicit module rather than `modules: true`.
+   *
+   * `modules: true` makes Miniflare walk the script itself to collect its
+   * dependencies, and that collector rejects any `import()` whose specifier it
+   * cannot resolve statically. The script we hand it is already a
+   * self-contained esbuild bundle, so there is nothing left to collect — a
+   * dynamic specifier surviving inside it belongs to a bundled dependency and
+   * must reach workerd untouched instead of failing the whole startup.
+   */
+  const modulePath = resolve(scriptPath ?? resolve(config.projectRoot, "worker.js"));
+
   return {
     name: config.name,
-    modules: true,
-    script,
-    ...(scriptPath ? { scriptPath } : {}),
+    modules: [{ type: "ESModule", path: modulePath, contents: script }],
+    modulesRoot: dirname(modulePath),
     ...(config.compatibilityDate ? { compatibilityDate: config.compatibilityDate } : {}),
     compatibilityFlags: config.compatibilityFlags,
     bindings: config.vars as Record<string, Json>,
