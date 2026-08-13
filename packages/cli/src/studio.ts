@@ -19,8 +19,10 @@ import type {
 import { Miniflare, LogLevel } from "miniflare";
 import type { MiniflareOptions, Request as MiniflareRequest } from "miniflare";
 import { createBridge } from "./bridge.js";
-import { bundleWorker } from "./bundler.js";
+import { bundleWithWrangler, bundleWorker } from "./bundler.js";
 import { LogBuffer, StudioLog } from "./log-buffer.js";
+import { backupPersistState, snapshotPersistState } from "./state-backup.js";
+import type { CopyOutcome } from "./state-backup.js";
 
 /**
  * Injected from package.json at build time by build.mjs, so `--version`, the
@@ -29,6 +31,9 @@ import { LogBuffer, StudioLog } from "./log-buffer.js";
 declare const __LOCAL_CF_VERSION__: string;
 
 export const VERSION = __LOCAL_CF_VERSION__;
+
+/** How long a shutdown may spend closing the runtime before we stop waiting. */
+const DISPOSE_TIMEOUT_MS = 5_000;
 
 export interface StudioOptions {
   cwd: string;
@@ -44,6 +49,10 @@ export interface StudioOptions {
   watch?: boolean;
   accountId?: string;
   apiToken?: string;
+  /** Opt back into writes in attach mode, once the other dev server is stopped. */
+  allowWrite?: boolean;
+  /** Skip the pre-flight copy of the persist directory. */
+  noBackup?: boolean;
 }
 
 /**
@@ -69,7 +78,7 @@ function applyFidelity(bindings: AnyBinding[], mode: StudioMode): AnyBinding[] {
           return {
             ...binding,
             fidelity: "disk",
-            note: "Attached: reads the same files on disk. Writes made by the running dev server may not appear until it flushes.",
+            note: "Attached to a point-in-time copy of the dev server's persist directory, taken when local-cf started. Restart local-cf to refresh it.",
           };
         case "durable_object":
           return {
@@ -132,11 +141,21 @@ export class Studio {
   readonly logs = new LogBuffer();
   readonly persistRoot: string;
   readonly startedAt = new Date().toISOString();
+  /**
+   * Attach mode shares a persist directory with a dev server we do not control,
+   * so it refuses writes unless the user states that server is stopped.
+   */
+  readonly readOnly: boolean;
+  /** The snapshot we attached to, or the backup taken before writing. */
+  stateCopy: CopyOutcome | undefined;
+  /** Which bundler produced the running worker, for the banner. */
+  bundler: "wrangler" | "esbuild" | undefined;
 
   private constructor(config: NormalizedWranglerConfig, private readonly settings: StudioOptions) {
     this.config = config;
     this.mode = settings.mode;
     this.persistRoot = persistPaths(config.projectRoot, settings.persistTo).root;
+    this.readOnly = settings.mode === "attach" && !settings.allowWrite;
   }
 
   static async start(settings: StudioOptions): Promise<Studio> {
@@ -148,8 +167,40 @@ export class Studio {
           ...(settings.environment ? { environment: settings.environment } : {}),
         });
 
-    const studio = new Studio(config, settings);
-    await studio.#boot();
+    /**
+     * Decide what this run is allowed to open before anything opens it.
+     *
+     * Attach defaults to a copy: the original persist directory belongs to a
+     * dev server we do not control, and simply starting a runtime against it
+     * writes SQLite sidecar files that its workerd may not be able to read.
+     */
+    const stateDir = settings.persistTo ?? resolve(config.projectRoot, ".wrangler", "state");
+    let effective = settings;
+    let copy: CopyOutcome | undefined;
+
+    if (settings.mode === "attach" && !settings.allowWrite) {
+      copy = await snapshotPersistState(stateDir, config.projectRoot);
+      if (copy.path) effective = { ...settings, persistTo: copy.path };
+    } else if (settings.mode === "attach" && !settings.noBackup) {
+      // Writing someone else's state was explicitly asked for; keep a way back.
+      copy = await backupPersistState(stateDir, config.projectRoot);
+    }
+
+    const studio = new Studio(config, effective);
+    studio.stateCopy = copy;
+
+    try {
+      await studio.#boot();
+    } catch (error) {
+      /**
+       * A half-booted Miniflare still has the persist directory's SQLite files
+       * open. Leaving them means stale `-wal`/`-shm` beside the user's data,
+       * which a *different* workerd build (their own `wrangler dev`) can fail
+       * to reconcile — so a failed start must still tear down cleanly.
+       */
+      await studio.dispose().catch(() => {});
+      throw error;
+    }
     if (settings.watch && settings.mode === "own") studio.#startWatching();
     return studio;
   }
@@ -189,13 +240,41 @@ export class Studio {
             `Use \`local-cf attach\` if another dev server owns the process.`,
         );
       }
-      const bundle = await bundleWorker(this.config.main, {
-        nodeCompat: this.config.compatibilityFlags.some((flag) =>
-          flag.startsWith("nodejs_compat"),
-        ),
-      });
+      /**
+       * Prefer the project's own wrangler. Its bundler is the one that knows
+       * which Node built-ins workerd implements and which need an `unenv`
+       * polyfill — reproducing that here is what kept failing. The esbuild
+       * pass stays as the fallback for projects without wrangler installed.
+       */
+      const viaWrangler =
+        process.env["LOCAL_CF_BUNDLER"] === "esbuild"
+          ? undefined
+          : await bundleWithWrangler({
+              projectRoot: this.config.projectRoot,
+              configPath: this.config.configPath,
+              ...(this.settings.environment ? { environment: this.settings.environment } : {}),
+            });
+
+      if (viaWrangler) {
+        this.logs.push("info", "studio", "Bundled the worker with the project's wrangler.");
+      } else {
+        this.logs.push(
+          "info",
+          "studio",
+          "Bundled the worker with the built-in esbuild pass (no usable wrangler found).",
+        );
+      }
+
+      const bundle =
+        viaWrangler ??
+        (await bundleWorker(this.config.main, {
+          nodeCompat: this.config.compatibilityFlags.some((flag) =>
+            flag.startsWith("nodejs_compat"),
+          ),
+        }));
       userScript = bundle.code;
       userScriptPath = this.config.main;
+      this.bundler = viaWrangler ? "wrangler" : "esbuild";
     }
 
     const bridge = createBridge({
@@ -223,6 +302,7 @@ export class Studio {
         ...(this.settings.host ? { host: this.settings.host } : {}),
         ...(this.settings.persistTo ? { persistTo: this.settings.persistTo } : {}),
         sidecarVars,
+        readOnly: this.readOnly,
       }),
       log: new StudioLog(this.logs, LogLevel.INFO, this.settings.quiet ?? false),
     };
@@ -298,8 +378,17 @@ export class Studio {
     }
   }
 
+  /**
+   * Release the runtime and, with it, every SQLite handle under the persist
+   * directory. Bounded: a dispose that hangs must not leave the process alive
+   * holding those files open, so we give it a deadline and move on.
+   */
   async dispose(): Promise<void> {
     this.#watcher?.close();
-    await this.stop();
+    this.#watcher = undefined;
+    await Promise.race([
+      this.stop(),
+      new Promise<void>((resolve) => setTimeout(resolve, DISPOSE_TIMEOUT_MS).unref()),
+    ]);
   }
 }

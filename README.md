@@ -15,7 +15,9 @@ npx local-cf
 
 
 Run that from a directory with a `wrangler.toml` / `wrangler.jsonc`, then open
-the dashboard URL it prints.
+the dashboard URL it prints. On its own it is a **read-only** browser over a
+copy of your dev server's data, so it cannot disturb anything. Use
+`local-cf dev` when you want to edit.
 
 ## Why
 
@@ -31,9 +33,14 @@ not after the next flush.
 
 | Command | What it does |
 | --- | --- |
-| `local-cf` / `local-cf dev` | Run your worker and the studio in one runtime (Mode A) |
-| `local-cf attach` | Attach to a dev server you don't control, over its persist directory (Mode B) |
+| `local-cf` / `local-cf attach` | Browse a point-in-time copy of a running dev server's data, **read-only** (Mode B) |
+| `local-cf dev` | Run your worker and the studio in one runtime, **read/write** (Mode A) |
 | `local-cf remote` | Browse real Cloudflare resources via the API (Mode C) |
+
+The default is deliberately the safe one. `attach` never executes your worker,
+so it never has to bundle it — which makes it the command most likely to just
+work — and it opens a copy rather than your real `.wrangler/state`, so nothing
+it does can affect the dev server you are attached to.
 
 Common options (`dev` / `attach` / `remote`):
 
@@ -47,13 +54,38 @@ Common options (`dev` / `attach` / `remote`):
 | `--no-watch` | Do not rebuild the worker on file changes |
 | `-q, --quiet` | Suppress worker logs in the terminal |
 | `--open` | Open the dashboard in your browser |
+| `--allow-write` | Attach to the real persist directory read/write — only when the other dev server is stopped |
+| `--no-backup` | Skip the copy taken before `--allow-write` opens your state |
 
 `remote` also takes `--account-id` / `--api-token` (or the
 `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` env vars).
 
-Mode B is a genuinely weaker guarantee than Mode A — no live Durable Object
-or Queue state, just what's on disk — and the dashboard labels bindings
-accordingly rather than implying parity.
+Mode B is a genuinely weaker guarantee than Mode A, and the dashboard labels
+bindings accordingly rather than implying parity. It shows a **point-in-time
+copy** taken when local-cf started — restart it to refresh — with no live
+Durable Object or Queue state.
+
+That copy is not caution for its own sake. Starting any runtime against a
+persist directory writes SQLite `-wal`/`-shm` files beside your data before a
+single request is served, and those files belong to the `workerd` build that
+made them. A different build — the one your own `wrangler dev` ships — can fail
+to reconcile them. Attaching to a copy is what makes Mode B unable to affect
+the dev server it is attached to.
+
+## Bundling
+
+`local-cf dev` has to turn your worker into something `workerd` can run. It
+prefers **your project's own `wrangler`**, via `wrangler deploy --dry-run`,
+which neither deploys nor authenticates. That matters because wrangler's
+bundler knows which Node built-ins `workerd` implements natively and which need
+an `unenv` polyfill — reproducing that matrix independently is a losing game,
+and getting it wrong is what makes a worker fail with `No such module
+"node:os"`.
+
+If the project has no `wrangler` installed, local-cf falls back to a built-in
+esbuild pass. That covers most workers but not the full Node-compat surface;
+the startup banner always says which one ran. Force the fallback with
+`LOCAL_CF_BUNDLER=esbuild`.
 
 ## What works today
 

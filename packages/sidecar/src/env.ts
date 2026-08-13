@@ -10,6 +10,8 @@ import type { StudioMode } from "@local-cf/core/types";
 export interface Env {
   LOCAL_CF_MODE: StudioMode;
   LOCAL_CF_HAS_USER_WORKER: boolean;
+  /** When true every mutating route is refused — see `readOnlyGuard`. */
+  LOCAL_CF_READ_ONLY: boolean;
 
   /** Escape hatch to the Node process (filesystem, logs, snapshots, audit). */
   BRIDGE: Fetcher;

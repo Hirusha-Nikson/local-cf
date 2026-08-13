@@ -1,6 +1,11 @@
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { builtinModules, createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { build } from "esbuild";
 import type { Plugin } from "esbuild";
-import { builtinModules } from "node:module";
 
 /**
  * Matches a Node built-in with or without the `node:` prefix, e.g. `path`,
@@ -85,6 +90,86 @@ export interface BundleResult {
   code: string;
   /** Absolute paths of every file that went into the bundle — used for watching. */
   dependencies: string[];
+}
+
+export interface WranglerBundleOptions {
+  projectRoot: string;
+  configPath?: string;
+  environment?: string;
+}
+
+/**
+ * The `wrangler` the *project* depends on, not one of ours.
+ *
+ * Matching the project's own toolchain is the whole point: its bundler already
+ * knows the Node-compat matrix (`unenv` polyfills for the built-ins workerd
+ * does not implement), which is the part local-cf's plain esbuild pass cannot
+ * reproduce and the reason workers failed with `No such module "node:os"`.
+ */
+function findWranglerBin(projectRoot: string): string | undefined {
+  try {
+    const require = createRequire(join(resolve(projectRoot), "package.json"));
+    const manifestPath = require.resolve("wrangler/package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      bin?: string | Record<string, string>;
+    };
+    const bin = typeof manifest.bin === "string" ? manifest.bin : manifest.bin?.["wrangler"];
+    return bin ? resolve(dirname(manifestPath), bin) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function runWrangler(bin: string, args: string[], cwd: string): Promise<number> {
+  return new Promise((resolvePromise) => {
+    const child = spawn(process.execPath, [bin, ...args], {
+      cwd,
+      stdio: "ignore",
+      // Dry runs never contact the API; make sure nothing prompts for auth.
+      env: { ...process.env, WRANGLER_SEND_METRICS: "false", CI: "1" },
+    });
+    child.on("error", () => resolvePromise(-1));
+    child.on("close", (code) => resolvePromise(code ?? -1));
+  });
+}
+
+/**
+ * Bundle through `wrangler deploy --dry-run`, which runs wrangler's real
+ * bundler and writes the result to disk without deploying or authenticating.
+ *
+ * Returns undefined when the project has no wrangler, when the dry run fails,
+ * or when it emits a shape we cannot hand to Miniflare as one module — every
+ * such case falls back to the built-in esbuild pass rather than failing.
+ */
+export async function bundleWithWrangler(
+  options: WranglerBundleOptions,
+): Promise<BundleResult | undefined> {
+  const bin = findWranglerBin(options.projectRoot);
+  if (!bin) return undefined;
+
+  const outdir = await mkdtemp(join(tmpdir(), "local-cf-bundle-"));
+  try {
+    const args = ["deploy", "--dry-run", "--outdir", outdir];
+    if (options.configPath) args.push("--config", options.configPath);
+    if (options.environment) args.push("--env", options.environment);
+
+    if ((await runWrangler(bin, args, options.projectRoot)) !== 0) return undefined;
+
+    const emitted = await readdir(outdir);
+    const scripts = emitted.filter((name) => name.endsWith(".js"));
+    // More than one module means wasm/text side-modules we would have to wire
+    // up individually; the esbuild path already inlines those.
+    if (scripts.length !== 1) return undefined;
+
+    return {
+      code: await readFile(join(outdir, scripts[0] as string), "utf8"),
+      dependencies: [],
+    };
+  } catch {
+    return undefined;
+  } finally {
+    await rm(outdir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 export async function bundleWorker(

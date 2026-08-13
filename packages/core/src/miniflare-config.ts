@@ -41,6 +41,14 @@ export interface BuildOptions {
   /** Extra plain-text vars handed to the sidecar only. */
   sidecarVars?: Record<string, string>;
   inspectorPort?: number;
+  /**
+   * Refuse every mutating API route.
+   *
+   * Set in attach mode, where another dev server owns the same persist
+   * directory: two workerd processes writing one set of SQLite files is not a
+   * supported configuration and has corrupted real projects.
+   */
+  readOnly?: boolean;
 }
 
 export const SIDECAR_WORKER_NAME = "__local-cf-sidecar";
@@ -184,6 +192,7 @@ export function buildSidecarWorkerOptions(options: BuildOptions): WorkerOptions 
     bindings: {
       LOCAL_CF_MODE: mode,
       LOCAL_CF_HAS_USER_WORKER: hasUserWorker,
+      LOCAL_CF_READ_ONLY: options.readOnly ?? false,
       ...(options.sidecarVars ?? {}),
     } satisfies Record<string, Json>,
     serviceBindings,

@@ -1,6 +1,7 @@
 import { STUDIO_API_PREFIX, STUDIO_PREFIX, STUDIO_UI_PREFIX } from "@local-cf/core/constants";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import type { AppEnv } from "./env.js";
 import { d1Routes } from "./routes/d1.js";
@@ -17,7 +18,38 @@ import { r2Routes } from "./routes/r2.js";
  * no OpenAPI or codegen step — the concrete Hono payoff called out in
  * SETUP.md §2.
  */
+/**
+ * Methods that cannot change anything on disk.
+ *
+ * `POST /d1/:binding/query` is the SQL editor's *read* path and is exempted
+ * here, then checked statement-by-statement inside the route itself — a SELECT
+ * has to keep working in read-only mode or the studio stops being a browser.
+ */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const READ_PATH_EXCEPTIONS = [/\/d1\/[^/]+\/query$/];
+
+const readOnlyGuard = createMiddleware<AppEnv>(async (c, next) => {
+  if (!c.env.LOCAL_CF_READ_ONLY) return next();
+  if (SAFE_METHODS.has(c.req.method)) return next();
+  if (READ_PATH_EXCEPTIONS.some((pattern) => pattern.test(new URL(c.req.url).pathname))) {
+    return next();
+  }
+
+  return c.json(
+    {
+      error: "local-cf is read-only in attach mode.",
+      detail:
+        "Another dev server owns this persist directory. Two runtimes writing " +
+        "the same SQLite files can corrupt them, so writes are refused here. " +
+        "Run `local-cf dev` to edit, or `local-cf --allow-write` if that dev " +
+        "server is stopped.",
+    },
+    403,
+  );
+});
+
 const api = new Hono<AppEnv>()
+  .use("*", readOnlyGuard)
   .route("/", opsRoutes)
   .route("/d1", d1Routes)
   .route("/kv", kvRoutes)

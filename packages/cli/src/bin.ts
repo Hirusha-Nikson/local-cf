@@ -15,6 +15,8 @@ interface CliOptions {
   watch: boolean;
   quiet: boolean;
   open: boolean;
+  backup: boolean;
+  allowWrite: boolean;
   accountId?: string;
   apiToken?: string;
 }
@@ -24,6 +26,21 @@ const MODE_LABEL: Record<StudioMode, string> = {
   attach: "attach (Mode B — shared persist directory)",
   remote: "remote (Mode C — Cloudflare REST API)",
 };
+
+/**
+ * Startup failures that mean "your worker needs wrangler's bundler", as
+ * opposed to a config mistake the user can fix themselves.
+ */
+function isNodeCompatError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /No such module "node:|Could not resolve "|nodejs_compat/.test(message);
+}
+
+/** workerd failing to open the persist directory, rather than a config mistake. */
+function isRuntimeStartError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /std::terminate|Workers runtime failed to start/.test(message);
+}
 
 function openBrowser(url: string): void {
   const command =
@@ -50,8 +67,29 @@ function banner(studio: Studio): void {
       "",
       `  ${pc.bold(pc.cyan("local-cf"))} ${pc.dim(`v${VERSION}`)}`,
       `  ${pc.dim("mode")}      ${MODE_LABEL[meta.mode]}`,
+      `  ${pc.dim("access")}    ${
+        studio.readOnly
+          ? `${pc.yellow("read-only")} ${pc.dim("— another dev server owns this state")}`
+          : pc.green("read/write")
+      }`,
       `  ${pc.dim("worker")}    ${meta.workerName}`,
+      ...(studio.bundler
+        ? [
+            `  ${pc.dim("bundler")}   ${
+              studio.bundler === "wrangler"
+                ? `${pc.green("wrangler")} ${pc.dim("(your project's)")}`
+                : `${pc.yellow("esbuild")} ${pc.dim("(built-in — install wrangler for full node compat)")}`
+            }`,
+          ]
+        : []),
       `  ${pc.dim("bindings")}  ${summary}`,
+      ...(studio.stateCopy?.path
+        ? [
+            `  ${pc.dim(studio.readOnly ? "snapshot" : "backup")}  ${pc.dim(
+              studio.stateCopy.path,
+            )}`,
+          ]
+        : []),
       meta.mode === "remote" ? "" : `  ${pc.dim("app")}       ${pc.green(studio.url)}`,
       `  ${pc.dim("studio")}    ${pc.green(studio.dashboardUrl)}`,
       "",
@@ -86,6 +124,8 @@ async function run(mode: StudioMode, options: CliOptions): Promise<void> {
     host: options.host,
     watch: options.watch,
     quiet: options.quiet,
+    allowWrite: options.allowWrite,
+    noBackup: options.backup === false,
     ...(options.env ? { environment: options.env } : {}),
     ...(options.config ? { configPath: options.config } : {}),
     ...(options.persistTo ? { persistTo: options.persistTo } : {}),
@@ -103,6 +143,13 @@ async function run(mode: StudioMode, options: CliOptions): Promise<void> {
     process.stdout.write(pc.dim("\n  Shutting down...\n"));
     void studio.dispose().finally(() => process.exit(0));
   };
+  /**
+   * SIGBREAK is Ctrl+Break on Windows, and SIGHUP fires when the terminal that
+   * owns us closes. Both used to kill the process outright, which left the
+   * persist directory's SQLite files open mid-write.
+   */
+  process.on("SIGBREAK", shutdown);
+  process.on("SIGHUP", shutdown);
 
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
@@ -117,7 +164,13 @@ function withCommonOptions(command: Command): Command {
     .option("--persist-to <path>", "override the persist directory")
     .option("--no-watch", "do not rebuild the worker on file changes")
     .option("-q, --quiet", "suppress worker logs in the terminal", false)
-    .option("--open", "open the dashboard in your browser", false);
+    .option("--open", "open the dashboard in your browser", false)
+    .option("--no-backup", "do not copy the persist directory before opening it")
+    .option(
+      "--allow-write",
+      "allow writes while attached — only when the other dev server is stopped",
+      false,
+    );
 }
 
 const program = new Command();
@@ -132,15 +185,23 @@ program
 
 withCommonOptions(
   program
-    .command("dev", { isDefault: true })
-    .description("run your worker and the studio in one runtime (Mode A)"),
+    .command("dev")
+    .description("run your worker and the studio in one runtime, read/write (Mode A)"),
 ).action((options: CliOptions) => run("own", options));
 
+/**
+ * The default.
+ *
+ * Attaching cannot execute the user's worker, so it never needs to bundle it —
+ * which makes it the command most likely to just work. It is read-only unless
+ * asked otherwise, so the first thing a new user runs cannot damage the
+ * project's local state.
+ */
 withCommonOptions(
   program
-    .command("attach")
+    .command("attach", { isDefault: true })
     .description(
-      "attach to a dev server you do not control, over its persist directory (Mode B)",
+      "browse the persist directory of a dev server you do not control, read-only (Mode B)",
     ),
 ).action((options: CliOptions) => run("attach", options));
 
@@ -151,5 +212,25 @@ withCommonOptions(program.command("remote").description("browse real Cloudflare 
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   process.stderr.write(`\n  ${pc.red("error")} ${error instanceof Error ? error.message : String(error)}\n\n`);
-  process.exitCode = 1;
+  if (isRuntimeStartError(error)) {
+    process.stderr.write(
+      `  ${pc.dim("workerd aborts like this when a SQLite file in the persist directory\n" +
+        "  cannot be read. If a previous run left it inconsistent, restore from\n" +
+        "  .local-cf/backups/, or delete .wrangler/state to start clean.")}\n\n`,
+    );
+  }
+  if (isNodeCompatError(error)) {
+    process.stderr.write(
+      `  ${pc.dim("This worker needs part of wrangler's bundler that local-cf does not\n" +
+        "  reimplement. Until it does, browse the same data read-only with:")}\n\n` +
+        `    ${pc.cyan("npx wrangler dev")}     ${pc.dim("# terminal 1")}\n` +
+        `    ${pc.cyan("npx local-cf")}         ${pc.dim("# terminal 2")}\n\n`,
+    );
+  }
+  /**
+   * `process.exitCode` alone is not enough: a failed boot can leave workerd
+   * handles on the event loop, and the CLI then sits there looking hung. The
+   * error is already reported, so leave deliberately.
+   */
+  process.exit(1);
 });

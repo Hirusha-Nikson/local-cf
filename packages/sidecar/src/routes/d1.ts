@@ -89,6 +89,22 @@ export const d1Routes = new Hono<AppEnv>()
   .post("/:binding/query", sqlBody, async (c) => {
     const bindingName = c.req.param("binding");
     const { sql, params } = c.req.valid("json");
+
+    // The route-level guard lets every /query through so SELECT keeps working
+    // read-only; a statement that writes still has to be refused here.
+    if (c.env.LOCAL_CF_READ_ONLY && MUTATING.test(sql)) {
+      return c.json(
+        {
+          error: "local-cf is read-only in attach mode.",
+          detail:
+            "This statement writes to a database another dev server has open. " +
+            "Run `local-cf dev` to edit, or `local-cf --allow-write` if that " +
+            "dev server is stopped.",
+        },
+        403,
+      );
+    }
+
     const db = await resolveD1(c.env, bindingName);
 
     const started = Date.now();
