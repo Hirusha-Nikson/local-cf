@@ -82,6 +82,17 @@ function banner(studio: Studio): void {
             }`,
           ]
         : []),
+      `  ${pc.dim("runtime")}   ${
+        studio.runtime.source === "project"
+          ? `${pc.green("miniflare")} ${pc.dim(
+              `${studio.runtime.miniflareVersion ?? "?"} (your project's)`,
+            )}`
+          : `${pc.yellow("miniflare")} ${pc.dim(
+              `${studio.runtime.miniflareVersion ?? "?"} (bundled — workerd ${
+                studio.runtime.workerdVersion ?? "?"
+              })`,
+            )}`
+      }`,
       `  ${pc.dim("bindings")}  ${summary}`,
       ...(studio.stateCopy?.path
         ? [
@@ -93,6 +104,9 @@ function banner(studio: Studio): void {
       meta.mode === "remote" ? "" : `  ${pc.dim("app")}       ${pc.green(studio.url)}`,
       `  ${pc.dim("studio")}    ${pc.green(studio.dashboardUrl)}`,
       "",
+      ...(studio.runtimeWarning
+        ? [`  ${pc.yellow("!")} ${pc.yellow(studio.runtimeWarning)}`, ""]
+        : []),
       ...meta.warnings.map((warning) => `  ${pc.yellow("!")} ${warning}`),
       meta.warnings.length > 0 ? "" : "",
     ]

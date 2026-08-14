@@ -1,5 +1,6 @@
 import type { LogEntry } from "@local-cf/core";
-import { Log, LogLevel } from "miniflare";
+import type { Log, LogLevel } from "miniflare";
+import type { MiniflareModule } from "./runtime.js";
 
 const MAX_ENTRIES = 2000;
 
@@ -27,38 +28,47 @@ export class LogBuffer {
   }
 }
 
-function toLevel(level: LogLevel): LogEntry["level"] {
+function toLevel(levels: MiniflareModule["LogLevel"], level: LogLevel): LogEntry["level"] {
   switch (level) {
-    case LogLevel.ERROR:
+    case levels.ERROR:
       return "error";
-    case LogLevel.WARN:
+    case levels.WARN:
       return "warn";
-    case LogLevel.DEBUG:
-    case LogLevel.VERBOSE:
+    case levels.DEBUG:
+    case levels.VERBOSE:
       return "debug";
     default:
       return "info";
   }
 }
 
-/** A Miniflare `Log` that tees into the buffer as well as the terminal. */
-export class StudioLog extends Log {
-  readonly buffer: LogBuffer;
-  readonly #quiet: boolean;
+/**
+ * Build a Miniflare `Log` that tees into the buffer as well as the terminal.
+ *
+ * A factory rather than a top-level `class StudioLog extends Log`, because the
+ * miniflare we run is resolved at startup — it may be the project's copy or our
+ * bundled one. Miniflare validates this option with `z.instanceof(Log)`, so the
+ * base class has to be the one belonging to the copy actually being started.
+ */
+export function createStudioLog(
+  runtime: MiniflareModule,
+  buffer: LogBuffer,
+  level: LogLevel,
+  quiet: boolean,
+): Log {
+  const { LogLevel: levels } = runtime;
 
-  constructor(buffer: LogBuffer, level: LogLevel, quiet: boolean) {
-    super(level);
-    this.buffer = buffer;
-    this.#quiet = quiet;
+  class StudioLog extends runtime.Log {
+    override logWithLevel(entryLevel: LogLevel, message: string): void {
+      buffer.push(toLevel(levels, entryLevel), "worker", message);
+      if (!quiet) super.logWithLevel(entryLevel, message);
+    }
+
+    override error(message: Error): void {
+      buffer.push("error", "worker", message.stack ?? message.message);
+      super.error(message);
+    }
   }
 
-  override logWithLevel(level: LogLevel, message: string): void {
-    this.buffer.push(toLevel(level), "worker", message);
-    if (!this.#quiet) super.logWithLevel(level, message);
-  }
-
-  override error(message: Error): void {
-    this.buffer.push("error", "worker", message.stack ?? message.message);
-    super.error(message);
-  }
+  return new StudioLog(level);
 }

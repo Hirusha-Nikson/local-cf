@@ -16,12 +16,17 @@ import type {
   StudioMeta,
   StudioMode,
 } from "@local-cf/core";
-import { Miniflare, LogLevel } from "miniflare";
-import type { MiniflareOptions, Request as MiniflareRequest } from "miniflare";
+import type { Miniflare, MiniflareOptions, Request as MiniflareRequest } from "miniflare";
 import { createBridge } from "./bridge.js";
 import { bundleWithWrangler, bundleWorker } from "./bundler.js";
-import { LogBuffer, StudioLog } from "./log-buffer.js";
-import { backupPersistState, snapshotPersistState } from "./state-backup.js";
+import { LogBuffer, createStudioLog } from "./log-buffer.js";
+import { resolveRuntime, runtimeMismatch } from "./runtime.js";
+import type { ResolvedRuntime } from "./runtime.js";
+import {
+  backupPersistState,
+  snapshotPersistState,
+  sweepRebuildableFiles,
+} from "./state-backup.js";
 import type { CopyOutcome } from "./state-backup.js";
 
 /**
@@ -150,12 +155,22 @@ export class Studio {
   stateCopy: CopyOutcome | undefined;
   /** Which bundler produced the running worker, for the banner. */
   bundler: "wrangler" | "esbuild" | undefined;
+  /** Whose miniflare (and therefore whose workerd) is running. */
+  readonly runtime: ResolvedRuntime;
+  /** Set when our workerd is newer than the project's — see `runtimeMismatch`. */
+  readonly runtimeWarning: string | undefined;
 
-  private constructor(config: NormalizedWranglerConfig, private readonly settings: StudioOptions) {
+  private constructor(
+    config: NormalizedWranglerConfig,
+    private readonly settings: StudioOptions,
+    runtime: ResolvedRuntime,
+  ) {
     this.config = config;
     this.mode = settings.mode;
     this.persistRoot = persistPaths(config.projectRoot, settings.persistTo).root;
     this.readOnly = settings.mode === "attach" && !settings.allowWrite;
+    this.runtime = runtime;
+    this.runtimeWarning = runtimeMismatch(runtime);
   }
 
   static async start(settings: StudioOptions): Promise<Studio> {
@@ -174,6 +189,13 @@ export class Studio {
      * dev server we do not control, and simply starting a runtime against it
      * writes SQLite sidecar files that its workerd may not be able to read.
      */
+    /**
+     * Prefer the project's own miniflare, for the same reason we prefer its
+     * wrangler to bundle: it is the copy whose workerd wrote the persist
+     * directory, and the only one guaranteed to be able to read it back.
+     */
+    const runtime = resolveRuntime(config.projectRoot);
+
     const stateDir = settings.persistTo ?? resolve(config.projectRoot, ".wrangler", "state");
     let effective = settings;
     let copy: CopyOutcome | undefined;
@@ -181,13 +203,36 @@ export class Studio {
     if (settings.mode === "attach" && !settings.allowWrite) {
       copy = await snapshotPersistState(stateDir, config.projectRoot);
       if (copy.path) effective = { ...settings, persistTo: copy.path };
-    } else if (settings.mode === "attach" && !settings.noBackup) {
-      // Writing someone else's state was explicitly asked for; keep a way back.
-      copy = await backupPersistState(stateDir, config.projectRoot);
+    } else if (settings.mode !== "remote" && !settings.noBackup) {
+      /**
+       * Everything that opens the persist directory read/write lands here:
+       * `local-cf dev`, and attach once writes were explicitly asked for.
+       *
+       * `dev` used to skip this. It is the one mode that runs the user's worker
+       * against their real `.wrangler/state`, so it is also the one most able to
+       * migrate those SQLite files forward past what their wrangler can read —
+       * exactly the case that needs a way back.
+       */
+      try {
+        copy = await backupPersistState(stateDir, config.projectRoot);
+      } catch (error) {
+        // Refusing to run `dev` because the state is too large to copy would
+        // trade a rare loss for a certain one. Attach keeps its guarantee.
+        if (settings.mode !== "own") throw error;
+        copy = { skipped: error instanceof Error ? error.message : String(error) };
+      }
     }
 
-    const studio = new Studio(config, effective);
+    const studio = new Studio(config, effective, runtime);
     studio.stateCopy = copy;
+    studio.logs.push(
+      "info",
+      "studio",
+      `Runtime: miniflare ${runtime.miniflareVersion ?? "?"} (${
+        runtime.source === "project" ? "the project's" : "bundled with local-cf"
+      }), workerd ${runtime.workerdVersion ?? "?"}.`,
+    );
+    if (studio.runtimeWarning) studio.logs.push("warn", "studio", studio.runtimeWarning);
 
     try {
       await studio.#boot();
@@ -304,13 +349,18 @@ export class Studio {
         sidecarVars,
         readOnly: this.readOnly,
       }),
-      log: new StudioLog(this.logs, LogLevel.INFO, this.settings.quiet ?? false),
+      log: createStudioLog(
+        this.runtime.module,
+        this.logs,
+        this.runtime.module.LogLevel.INFO,
+        this.settings.quiet ?? false,
+      ),
     };
   }
 
   async #boot(): Promise<void> {
     this.#options = await this.#buildOptions();
-    this.#miniflare = new Miniflare(this.#options);
+    this.#miniflare = new this.runtime.module.Miniflare(this.#options);
     await this.#miniflare.ready;
     this.logs.push("info", "studio", `local-cf ready in ${this.mode} mode at ${this.url}`);
   }
@@ -390,5 +440,15 @@ export class Studio {
       this.stop(),
       new Promise<void>((resolve) => setTimeout(resolve, DISPOSE_TIMEOUT_MS).unref()),
     ]);
+
+    /**
+     * Now that workerd has let go, clear the `-shm` files it left behind in
+     * whichever directory *we* opened, so the next process to open these
+     * databases builds its own. Never `-wal`: that is committed data, and the
+     * dispose above is what checkpoints it.
+     */
+    if (this.mode !== "remote") {
+      await sweepRebuildableFiles(this.persistRoot).catch(() => 0);
+    }
   }
 }

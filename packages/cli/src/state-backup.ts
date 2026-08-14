@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import type { Dirent } from "node:fs";
 import { cp, mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -102,6 +103,49 @@ export async function snapshotPersistState(
     "Could not prepare a snapshot of the persist directory: every slot under " +
       `${root} is locked. Close other local-cf processes and try again.`,
   );
+}
+
+/**
+ * Delete the SQLite `-shm` files left under a persist directory we opened.
+ *
+ * `-shm` is a shared-memory index describing one process's view of a WAL. It is
+ * rebuilt whenever a database is opened without one, so removing ours after the
+ * runtime has released its handles hands the next process — the project's own
+ * `wrangler dev`, on a possibly different workerd — a clean slate.
+ *
+ * Deliberately *not* `-wal`: that file is committed data that has not been
+ * checkpointed into the main database yet, and deleting it silently loses
+ * writes. A clean shutdown checkpoints it; that is the mechanism to trust.
+ *
+ * Best-effort throughout. This runs during shutdown, and a file that will not
+ * delete (an orphaned workerd still holding it on Windows) is not worth
+ * failing an exit over.
+ */
+export async function sweepRebuildableFiles(persistRoot: string): Promise<number> {
+  if (!existsSync(persistRoot)) return 0;
+
+  let removed = 0;
+  let entries: Dirent[];
+  try {
+    entries = await readdir(persistRoot, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+
+  for (const entry of entries) {
+    const full = join(persistRoot, entry.name);
+    if (entry.isDirectory()) {
+      removed += await sweepRebuildableFiles(full);
+    } else if (entry.isFile() && full.endsWith("-shm")) {
+      try {
+        await rm(full, { force: true });
+        removed += 1;
+      } catch {
+        // Still locked; leave it. SQLite rebuilds it either way.
+      }
+    }
+  }
+  return removed;
 }
 
 /**
