@@ -1,6 +1,6 @@
 {
   "name": "local-cf",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "A local-first studio for Cloudflare Workers: browse and edit the exact D1/KV/R2/DO/Queues your worker is using, offline.",
   "license": "MIT",
@@ -22,7 +22,8 @@
     "kv",
     "r2",
     "durable-objects",
-    "devtools"
+    "devtools",
+    "local-cf"
   ],
   "bin": {
     "local-cf": "./dist/bin.js"
