@@ -1,15 +1,17 @@
 "use client";
 
-import type { D1MigrationFile } from "@local-cf/core/types";
+import type { BindingFidelity, D1MigrationFile } from "@local-cf/core/types";
+import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { unwrap } from "../api";
 import {
-  BindingList,
   Button,
   Card,
   DataTable,
   Empty,
   ErrorNote,
+  FidelityBadge,
+  Skeleton,
   SkeletonList,
   SkeletonTable,
   SplitView,
@@ -47,11 +49,30 @@ export function D1View() {
   const { client, baseUrl } = useStudio();
   const bindings = useBindings("d1");
   const [binding, setBinding] = useState<string | null>(null);
+  const [table, setTable] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>("browse");
 
   useEffect(() => {
     if (!binding && bindings[0]) setBinding(bindings[0].binding);
   }, [bindings, binding]);
+
+  /*
+   * The table list is fetched here rather than inside the browser panel because
+   * the navigation tree and the panel both read it, and they have to agree on
+   * which table is selected.
+   */
+  const tables = useAsync(async () => {
+    if (!binding) return null;
+    return unwrap<{ tables: TableInfo[] }>(
+      await client.d1[":binding"].tables.$get({ param: { binding } }),
+    );
+  }, [binding]);
+
+  // Fall back to the first table whenever the current one is not in this database.
+  useEffect(() => {
+    const names = tables.data?.tables.map((item) => item.name) ?? [];
+    setTable((current) => (current && names.includes(current) ? current : (names[0] ?? null)));
+  }, [tables.data]);
 
   if (bindings.length === 0) {
     return <Empty>No D1 databases are declared in your wrangler config.</Empty>;
@@ -60,18 +81,36 @@ export function D1View() {
   return (
     <SplitView
       sidebar={
-        <BindingList
+        <DatabaseNav
           bindings={bindings}
-          selected={binding}
-          onSelect={setBinding}
-          describe={(item) => item.databaseName}
+          binding={binding}
+          onSelectBinding={(next) => {
+            setBinding(next);
+            setTable(null);
+          }}
+          tables={tables.data?.tables ?? []}
+          tablesLoading={tables.loading}
+          table={table}
+          onSelectTable={(next) => {
+            setTable(next);
+            // Picking a table is a request to see it.
+            setPanel("browse");
+          }}
         />
       }
     >
       <Tabs tabs={PANELS} active={panel} onSelect={setPanel} />
 
       {binding && panel === "browse" && (
-        <TableBrowser key={`${binding}-browse`} binding={binding} baseUrl={baseUrl} client={client} />
+        <TableBrowser
+          key={`${binding}-${table ?? "none"}`}
+          binding={binding}
+          table={table}
+          baseUrl={baseUrl}
+          client={client}
+          loading={tables.loading}
+          error={tables.error}
+        />
       )}
       {binding && panel === "query" && <SqlEditor key={`${binding}-sql`} binding={binding} client={client} />}
       {binding && panel === "migrations" && (
@@ -83,26 +122,173 @@ export function D1View() {
 
 /* -------------------------------------------------------------------------- */
 
+interface D1Binding {
+  binding: string;
+  databaseName: string;
+  fidelity: BindingFidelity;
+  note?: string;
+}
+
+/**
+ * Databases, each expanding to its own tables.
+ *
+ * D1 is the only binding kind with a second level worth navigating, so this
+ * lives here rather than complicating the shared `BindingList` that KV, R2,
+ * Durable Objects and Queues all use.
+ */
+function DatabaseNav({
+  bindings,
+  binding,
+  onSelectBinding,
+  tables,
+  tablesLoading,
+  table,
+  onSelectTable,
+}: {
+  bindings: D1Binding[];
+  binding: string | null;
+  onSelectBinding: (binding: string) => void;
+  tables: TableInfo[];
+  tablesLoading: boolean;
+  table: string | null;
+  onSelectTable: (table: string) => void;
+}) {
+  /*
+   * Collapsing is tracked separately from selection. Deriving "open" from the
+   * selected binding alone means clicking the open database just re-selects it
+   * and it can never be closed — so this records the ones explicitly collapsed,
+   * and selecting a different database always reopens it.
+   */
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+
+  const toggle = (name: string) => {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  return (
+    <nav className="p-2">
+      <p className="px-2 pt-1 pb-1.5 text-xs font-medium text-fg-subtle">Databases</p>
+
+      {bindings.map((item) => {
+        const isSelected = item.binding === binding;
+        const isOpen = isSelected && !collapsed.has(item.binding);
+        return (
+          <div key={item.binding}>
+            <button
+              type="button"
+              onClick={() => {
+                if (isSelected) {
+                  toggle(item.binding);
+                  return;
+                }
+                onSelectBinding(item.binding);
+                setCollapsed((current) => {
+                  const next = new Set(current);
+                  next.delete(item.binding);
+                  return next;
+                });
+              }}
+              aria-expanded={isOpen}
+              className={cx(
+                "flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 pl-1 text-left",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                isSelected ? "bg-tint" : "hover:bg-tint",
+              )}
+            >
+              {/* Transform, not colour — rotation is the one transition the rules allow. */}
+              <ChevronRight
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className={cx(
+                  "size-3.5 shrink-0 text-fg-muted transition-transform",
+                  isOpen && "rotate-90",
+                )}
+              />
+              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span className="truncate text-sm font-medium text-fg-strong">
+                  {item.databaseName}
+                </span>
+                <FidelityBadge fidelity={item.fidelity} title={item.note} />
+              </span>
+            </button>
+
+            {isOpen && (
+              /*
+               * Each row carries its own left border, so together they draw one
+               * continuous trunk under the chevron — and the selected row simply
+               * turns its own segment orange instead of needing a second rail.
+               * `ml-[11px]` centres the trunk on the 14px chevron above it.
+               */
+              <ul className="mt-0.5 mb-1 ml-[11px]">
+                {tablesLoading ? (
+                  Array.from({ length: 3 }).map((_, row) => (
+                    <li key={row} className="border-l py-1.5 pl-3 hairline">
+                      <Skeleton className="h-3.5" style={{ width: `${50 + row * 15}%` }} />
+                    </li>
+                  ))
+                ) : tables.length === 0 ? (
+                  <li className="border-l py-1 pl-3 text-sm text-fg-subtle hairline">
+                    No tables yet
+                  </li>
+                ) : (
+                  tables.map((item) => {
+                    const selected = item.name === table;
+                    return (
+                      <li
+                        key={item.name}
+                        className={cx("border-l", selected ? "border-orange-500" : "hairline")}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => onSelectTable(item.name)}
+                          aria-current={selected ? "true" : undefined}
+                          className={cx(
+                            "flex w-full items-center rounded-r-md py-1 pr-2 pl-3 text-left font-mono text-sm",
+                            "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                            selected
+                              ? "bg-orange-500/10 font-medium text-orange-700 dark:text-orange-400"
+                              : "text-fg hover:bg-tint",
+                          )}
+                        >
+                          <span className="truncate">{item.name}</span>
+                        </button>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
 function TableBrowser({
   binding,
+  table,
   baseUrl,
   client,
+  loading,
+  error,
 }: {
   binding: string;
+  table: string | null;
   baseUrl: string;
   client: ReturnType<typeof useStudio>["client"];
+  loading: boolean;
+  error: string | null;
 }) {
-  const [table, setTable] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const pageSize = 50;
-
-  const tables = useAsync(
-    async () =>
-      unwrap<{ tables: TableInfo[] }>(
-        await client.d1[":binding"].tables.$get({ param: { binding } }),
-      ),
-    [binding],
-  );
 
   const rows = useAsync(async () => {
     if (!table) return null;
@@ -114,13 +300,9 @@ function TableBrowser({
     );
   }, [binding, table, offset]);
 
-  useEffect(() => {
-    if (!table && tables.data?.tables[0]) setTable(tables.data.tables[0].name);
-  }, [tables.data, table]);
-
-  if (tables.loading) return <SkeletonList rows={6} />;
-  if (tables.error) return <ErrorNote title="Could not list tables" detail={tables.error} />;
-  if (!tables.data || tables.data.tables.length === 0) {
+  if (loading) return <SkeletonList rows={6} />;
+  if (error) return <ErrorNote title="Could not list tables" detail={error} />;
+  if (!table) {
     return <Empty>This database has no tables yet. Apply a migration to create some.</Empty>;
   }
 
@@ -129,27 +311,6 @@ function TableBrowser({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1.5">
-        {tables.data.tables.map((item) => (
-          <button
-            key={item.name}
-            type="button"
-            onClick={() => {
-              setTable(item.name);
-              setOffset(0);
-            }}
-            className={cx(
-              "rounded-md border px-2.5 py-1 font-mono text-xs transition-colors",
-              item.name === table
-                ? "border-orange-300 bg-orange-50 font-medium text-orange-800 dark:border-orange-900/60 dark:bg-orange-500/10 dark:text-orange-400"
-                : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700",
-            )}
-          >
-            {item.name}
-          </button>
-        ))}
-      </div>
-
       {table && (
         <Card
           title={
@@ -162,13 +323,13 @@ function TableBrowser({
             <>
               <a
                 href={`${baseUrl}/d1/${encodeURIComponent(binding)}/export?table=${encodeURIComponent(table)}`}
-                className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                className="inline-flex h-7 items-center rounded-md bg-surface px-2 text-xs font-medium text-fg ring ring-line hover:bg-tint"
               >
                 Export CSV
               </a>
               <Button
                 variant="secondary"
-                className="px-2 py-1 text-xs"
+                size="sm"
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - pageSize))}
               >
@@ -176,7 +337,7 @@ function TableBrowser({
               </Button>
               <Button
                 variant="secondary"
-                className="px-2 py-1 text-xs"
+                size="sm"
                 disabled={offset + pageSize >= total}
                 onClick={() => setOffset(offset + pageSize)}
               >
@@ -191,7 +352,7 @@ function TableBrowser({
           }
         >
           {rows.error ? (
-            <div className="p-4">
+            <div className="px-5 py-4">
               <ErrorNote title="Query failed" detail={rows.error} />
             </div>
           ) : rows.loading ? (
@@ -242,14 +403,14 @@ function SqlEditor({
         footer={
           <>
             One statement per run — use the Migrations tab for multi-statement scripts. Press{" "}
-            <kbd className="rounded border border-zinc-300 px-1 font-mono dark:border-zinc-600">
+            <kbd className="rounded-md px-1 font-mono text-[0.9em] ring ring-line">
               Ctrl/⌘ + Enter
             </kbd>{" "}
             to execute.
           </>
         }
       >
-        <div className="p-3">
+        <div className="px-4 py-3">
           <Textarea
             rows={8}
             value={sql}
@@ -342,24 +503,24 @@ function Migrations({
             {migrations.map((migration) => (
               <li
                 key={migration.name}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
+                className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5"
               >
                 <span className="flex min-w-0 items-center gap-2.5">
                   <span
                     aria-hidden="true"
                     className={cx(
                       "size-2 shrink-0 rounded-full",
-                      migration.applied ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600",
+                      migration.applied ? "bg-success" : "bg-fill",
                     )}
                   />
                   <span className="truncate font-mono text-sm">{migration.name}</span>
                 </span>
                 {migration.applied ? (
-                  <span className="text-xs text-zinc-500">applied {migration.appliedAt}</span>
+                  <span className="text-sm text-fg-subtle">applied {migration.appliedAt}</span>
                 ) : (
                   <Button
                     variant="primary"
-                    className="px-2.5 py-1 text-xs"
+                    size="sm"
                     disabled={apply.pending}
                     onClick={() => apply.run(migration.name)}
                   >

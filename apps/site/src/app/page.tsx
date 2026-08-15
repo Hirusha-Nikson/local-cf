@@ -31,14 +31,12 @@ export default function HomePage() {
   return (
     <main>
       <section className="mx-auto max-w-5xl px-4 pb-12 pt-16">
-        <p className="mb-3 text-sm font-medium uppercase tracking-widest text-orange-600">
-          local-first developer tooling
-        </p>
-        <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
+        <p className="mb-3 text-sm font-medium text-orange-600">Local-first developer tooling</p>
+        <h1 className="max-w-3xl text-4xl font-semibold sm:text-5xl">
           See inside your Cloudflare Worker&rsquo;s storage, without leaving localhost.
         </h1>
-        <p className="mt-5 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-          <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-base dark:bg-zinc-800">
+        <p className="mt-5 max-w-2xl text-lg text-fg-subtle">
+          <code className="rounded-md bg-recessed px-1.5 py-0.5 font-mono text-[0.9em]">
             local-cf
           </code>{" "}
           boots your worker and a studio sidecar in one runtime, so the dashboard reads and writes
@@ -46,24 +44,28 @@ export default function HomePage() {
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <code className="rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2.5 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <code className="rounded-lg bg-recessed px-4 py-2.5 font-mono text-sm ring ring-line">
             npx local-cf
           </code>
           <Link
             href="/docs"
-            className="rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-500"
+            className="group relative inline-flex overflow-hidden rounded-lg bg-accent-fill px-4 py-2.5 text-sm font-medium text-white ring ring-accent-ring"
           >
-            Read the docs
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 rounded-[inherit] bg-linear-to-b from-accent-grad to-accent shadow-[inset_0_1px_0_0_var(--color-accent-fill)] group-hover:from-accent-fill"
+            />
+            <span className="relative">Read the docs</span>
           </Link>
         </div>
       </section>
 
       <section className="mx-auto max-w-5xl px-4 py-8">
-        <div className="grid gap-px overflow-hidden rounded-xl border border-zinc-200 bg-zinc-200 sm:grid-cols-2 lg:grid-cols-3 dark:border-zinc-800 dark:bg-zinc-800">
+        <div className="grid gap-px overflow-hidden rounded-xl bg-hairline ring ring-line sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature) => (
-            <article key={feature.title} className="bg-white p-5 dark:bg-zinc-950">
-              <h2 className="text-sm font-semibold">{feature.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+            <article key={feature.title} className="bg-surface px-5 py-4">
+              <h2 className="font-semibold text-fg-strong">{feature.title}</h2>
+              <p className="mt-1.5 text-sm leading-6 text-fg-subtle">
                 {feature.body}
               </p>
             </article>
@@ -72,33 +74,33 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-5xl px-4 py-8">
-        <h2 className="text-xl font-semibold tracking-tight">Three modes, stated plainly</h2>
+        <h2 className="text-xl font-semibold text-fg-strong">Three modes, stated plainly</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-                <th className="py-2 pr-4 font-semibold">Mode</th>
-                <th className="py-2 pr-4 font-semibold">Command</th>
-                <th className="py-2 pr-4 font-semibold">D1 / KV / R2</th>
-                <th className="py-2 font-semibold">Durable Objects &amp; Queues</th>
+              <tr className="border-b text-sm text-fg-subtle hairline">
+                <th className="py-2 pr-4 font-medium">Mode</th>
+                <th className="py-2 pr-4 font-medium">Command</th>
+                <th className="py-2 pr-4 font-medium">D1 / KV / R2</th>
+                <th className="py-2 font-medium">Durable Objects &amp; Queues</th>
               </tr>
             </thead>
-            <tbody className="text-zinc-700 dark:text-zinc-300">
-              <tr className="border-b border-zinc-100 dark:border-zinc-800/60">
+            <tbody className="text-fg">
+              <tr className="border-b hairline">
                 <td className="py-2.5 pr-4 font-medium">A — shared runtime</td>
-                <td className="py-2.5 pr-4 font-mono text-xs">local-cf</td>
+                <td className="py-2.5 pr-4 font-mono text-sm">local-cf</td>
                 <td className="py-2.5 pr-4">Same live objects</td>
                 <td className="py-2.5">Live, including in-memory state</td>
               </tr>
-              <tr className="border-b border-zinc-100 dark:border-zinc-800/60">
+              <tr className="border-b hairline">
                 <td className="py-2.5 pr-4 font-medium">B — attached</td>
-                <td className="py-2.5 pr-4 font-mono text-xs">local-cf attach</td>
+                <td className="py-2.5 pr-4 font-mono text-sm">local-cf attach</td>
                 <td className="py-2.5 pr-4">Same files on disk</td>
                 <td className="py-2.5">Not available across processes</td>
               </tr>
               <tr>
                 <td className="py-2.5 pr-4 font-medium">C — remote</td>
-                <td className="py-2.5 pr-4 font-mono text-xs">local-cf remote</td>
+                <td className="py-2.5 pr-4 font-mono text-sm">local-cf remote</td>
                 <td className="py-2.5 pr-4">Your real Cloudflare account</td>
                 <td className="py-2.5">No REST API equivalent</td>
               </tr>

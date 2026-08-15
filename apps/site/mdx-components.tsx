@@ -3,50 +3,47 @@ import type { MDXComponents } from "mdx/types";
 /**
  * Styling for MDX docs pages. Tailwind utilities are applied here rather than
  * via a prose plugin so docs and app chrome share exactly one type scale.
+ *
+ * Prose stays at 16px — the 14px content rule is for dense product surfaces,
+ * not long-form reading. Everything else follows the same rules as the studio:
+ * sentence-case headings, no letter-spacing, blue links rather than the brand
+ * orange, and rings instead of borders wherever a shadow is involved.
  */
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     h1: ({ children }) => (
-      <h1 className="mb-4 mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-        {children}
-      </h1>
+      <h1 className="mt-2 mb-4 text-3xl font-semibold text-fg-strong">{children}</h1>
     ),
     h2: ({ children }) => (
-      <h2 className="mb-3 mt-10 border-b border-zinc-200 pb-2 text-xl font-semibold text-zinc-900 dark:border-zinc-800 dark:text-zinc-100">
+      <h2 className="mt-10 mb-3 border-b pb-2 text-xl font-semibold text-fg-strong hairline">
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="mb-2 mt-6 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-        {children}
-      </h3>
+      <h3 className="mt-6 mb-2 text-base font-semibold text-fg-strong">{children}</h3>
     ),
-    p: ({ children }) => (
-      <p className="my-3 leading-7 text-zinc-700 dark:text-zinc-300">{children}</p>
-    ),
+    p: ({ children }) => <p className="my-3 leading-7 text-fg">{children}</p>,
     ul: ({ children }) => (
-      <ul className="my-3 list-disc space-y-1.5 pl-6 text-zinc-700 dark:text-zinc-300">
-        {children}
-      </ul>
+      <ul className="my-3 list-disc space-y-1.5 pl-6 text-fg">{children}</ul>
     ),
     ol: ({ children }) => (
-      <ol className="my-3 list-decimal space-y-1.5 pl-6 text-zinc-700 dark:text-zinc-300">
-        {children}
-      </ol>
+      <ol className="my-3 list-decimal space-y-1.5 pl-6 text-fg">{children}</ol>
     ),
     a: ({ href, children }) => (
-      <a href={href} className="text-orange-600 underline underline-offset-2 hover:text-orange-500">
+      // Cloudflare uses blue for inline links, never the brand orange.
+      <a href={href} className="text-link underline underline-offset-2">
         {children}
       </a>
     ),
     code: ({ children }) => (
-      <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[0.85em] text-orange-700 dark:bg-zinc-800 dark:text-orange-400">
+      // Monospace runs large beside body text; 0.9em evens the two out.
+      <code className="rounded-md bg-recessed px-1.5 py-0.5 font-mono text-[0.9em] text-fg">
         {children}
       </code>
     ),
     pre: ({ children }) => (
       // Code blocks scroll inside themselves; the page never scrolls sideways.
-      <pre className="my-4 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-xs leading-relaxed dark:border-zinc-800 dark:bg-zinc-900">
+      <pre className="my-4 overflow-x-auto rounded-lg bg-recessed px-4 py-3 text-sm leading-relaxed ring ring-line">
         {children}
       </pre>
     ),
@@ -56,15 +53,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       </div>
     ),
     th: ({ children }) => (
-      <th className="border-b border-zinc-300 px-3 py-2 font-semibold dark:border-zinc-700">
-        {children}
-      </th>
+      <th className="border-b px-3 py-2 font-medium text-fg-subtle hairline">{children}</th>
     ),
-    td: ({ children }) => (
-      <td className="border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">{children}</td>
-    ),
+    td: ({ children }) => <td className="border-b px-3 py-2 hairline">{children}</td>,
     blockquote: ({ children }) => (
-      <blockquote className="my-4 border-l-2 border-orange-500 bg-orange-50/50 py-1 pl-4 text-zinc-700 dark:bg-orange-950/20 dark:text-zinc-300">
+      <blockquote className="my-4 rounded-r-lg border-l-2 border-accent bg-recessed py-2 pl-4 text-fg">
         {children}
       </blockquote>
     ),

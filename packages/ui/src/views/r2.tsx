@@ -93,6 +93,7 @@ export function R2View() {
           selected={binding}
           onSelect={setBinding}
           describe={(item) => item.bucketName}
+          label="Buckets"
         />
       }
     >
@@ -104,11 +105,16 @@ export function R2View() {
           value={prefix}
           onChange={(event) => setPrefix(event.target.value)}
         />
-        <label className="cursor-pointer rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-orange-600">
-          Upload file…
+        {/* A label, not a button, so the hidden file input stays keyboard-reachable. */}
+        <label className="group relative inline-flex h-9 cursor-pointer items-center overflow-hidden rounded-lg bg-accent-fill px-3 text-sm font-medium text-white ring ring-accent-ring focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 rounded-[inherit] bg-linear-to-b from-accent-grad to-accent shadow-[inset_0_1px_0_0_var(--color-accent-fill)] group-hover:from-accent-fill"
+          />
+          <span className="relative">Upload file…</span>
           <input
             type="file"
-            className="hidden"
+            className="sr-only"
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) upload.run(file);
@@ -140,7 +146,7 @@ export function R2View() {
         {objects.loading ? (
           <SkeletonTable columns={5} rows={8} />
         ) : objects.error ? (
-          <div className="p-4">
+          <div className="px-5 py-4">
             <ErrorNote title="Could not list objects" detail={objects.error} />
           </div>
         ) : (objects.data?.objects.length ?? 0) === 0 ? (
@@ -150,19 +156,19 @@ export function R2View() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr>
-                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
+                  <th scope="col" className="sticky top-0 z-10 border-b px-4 py-2 text-sm font-medium text-fg-subtle hairline bg-recessed">
                     Key
                   </th>
-                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
+                  <th scope="col" className="sticky top-0 z-10 border-b px-4 py-2 text-sm font-medium text-fg-subtle hairline bg-recessed">
                     Size
                   </th>
-                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
+                  <th scope="col" className="sticky top-0 z-10 border-b px-4 py-2 text-sm font-medium text-fg-subtle hairline bg-recessed">
                     Type
                   </th>
-                  <th scope="col" className="border-b px-4 py-2 text-xs font-semibold text-zinc-600 hairline surface-sunken dark:text-zinc-400">
+                  <th scope="col" className="sticky top-0 z-10 border-b px-4 py-2 text-sm font-medium text-fg-subtle hairline bg-recessed">
                     Uploaded
                   </th>
-                  <th scope="col" className="border-b px-4 py-2 hairline surface-sunken">
+                  <th scope="col" className="border-b px-4 py-2 hairline bg-recessed">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -170,24 +176,24 @@ export function R2View() {
               <tbody>
                 {objects.data?.objects.map((object) => (
                   <tr key={object.key} className="border-b last:border-0 hairline">
-                    <td className="max-w-md truncate px-4 py-2 font-mono text-xs">{object.key}</td>
-                    <td className="px-4 py-2 whitespace-nowrap tabular-nums text-zinc-600 dark:text-zinc-400">
+                    <td className="max-w-md truncate px-4 py-2 font-mono text-sm">{object.key}</td>
+                    <td className="px-4 py-2 whitespace-nowrap tabular-nums text-fg-subtle">
                       {formatBytes(object.size)}
                     </td>
-                    <td className="px-4 py-2 text-xs text-zinc-500">{object.contentType ?? "—"}</td>
-                    <td className="px-4 py-2 text-xs whitespace-nowrap text-zinc-500">
+                    <td className="px-4 py-2 text-sm text-fg-subtle">{object.contentType ?? "—"}</td>
+                    <td className="px-4 py-2 text-sm whitespace-nowrap text-fg-subtle">
                       {new Date(object.uploaded).toLocaleString()}
                     </td>
                     <td className="px-4 py-2 text-right whitespace-nowrap">
                       <a
                         href={`${baseUrl}/r2/${encodeURIComponent(binding ?? "")}/object?key=${encodeURIComponent(object.key)}`}
-                        className="mr-3 text-xs font-medium text-zinc-600 hover:text-orange-600 dark:text-zinc-400 dark:hover:text-orange-400"
+                        className="mr-3 text-sm font-medium text-link hover:underline"
                       >
                         Download
                       </a>
                       <Button
                         variant="danger"
-                        className="px-2 py-0.5 text-xs"
+                        size="sm"
                         disabled={remove.pending}
                         onClick={() => remove.run(object.key)}
                       >

@@ -23,7 +23,8 @@
   "dependencies": {
     "@local-cf/core": "workspace:*",
     "@local-cf/sidecar": "workspace:*",
-    "hono": "^4.6.16"
+    "hono": "^4.6.16",
+    "lucide-react": "^1.31.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.7",

@@ -1,4 +1,4 @@
-import { ThemeProvider, ThemeToggle, THEME_INIT_SCRIPT } from "@local-cf/ui";
+import { Logo, ThemeProvider, ThemeToggle, THEME_INIT_SCRIPT } from "@local-cf/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Script from "next/script";
@@ -22,17 +22,15 @@ const NAV = [
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="min-h-screen">
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}
         </Script>
         <ThemeProvider>
-          <header className="border-b border-zinc-200 dark:border-zinc-800">
+          <header className="border-b bg-surface hairline">
             <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
-              <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-                <span className="grid size-6 place-items-center rounded bg-orange-600 text-xs font-bold text-white">
-                  cf
-                </span>
+              <Link href="/" className="flex items-center gap-2 font-semibold text-fg-strong">
+                <Logo />
                 local-cf
               </Link>
               <nav className="ml-auto flex items-center gap-5 text-sm">
@@ -40,14 +38,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                    className="text-fg-subtle hover:text-fg"
                   >
                     {item.label}
                   </Link>
                 ))}
                 <a
                   href="https://www.npmjs.com/package/local-cf"
-                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                  className="rounded-lg bg-contrast px-3 py-1.5 font-medium text-canvas hover:opacity-90"
                 >
                   npm
                 </a>
@@ -58,8 +56,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
           {children}
 
-          <footer className="mt-16 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="mx-auto max-w-5xl px-4 py-6 text-xs text-zinc-500">
+          <footer className="mt-16 border-t hairline">
+            <div className="mx-auto max-w-5xl px-4 py-6 text-sm text-fg-subtle">
               local-cf · MIT licensed · not affiliated with Cloudflare
             </div>
           </footer>

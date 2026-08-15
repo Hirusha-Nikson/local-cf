@@ -29,41 +29,47 @@ export default function HostedDashboardPage() {
   if (!baseUrl) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16">
-        <h1 className="text-2xl font-bold tracking-tight">Connect to your local studio</h1>
-        <p className="mt-3 text-zinc-600 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold text-fg-strong">Connect to your local studio</h1>
+        <p className="mt-3 text-fg-subtle">
           This page is the same dashboard that ships inside the npm package, but it runs on our
-          domain — so it needs the address of the <code className="font-mono">local-cf</code>{" "}
-          instance on your machine.
+          domain — so it needs the address of the{" "}
+          <code className="font-mono text-[0.9em]">local-cf</code> instance on your machine.
         </p>
 
         <form
-          className="mt-6 flex flex-wrap gap-3"
+          className="mt-6 flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             window.localStorage.setItem(STORAGE_KEY, draft);
             setBaseUrl(draft);
           }}
         >
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            className="min-w-64 flex-1 rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+          <label className="min-w-64 flex-1">
+            <span className="mb-1.5 block text-sm font-medium text-fg">Studio address</span>
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              className="w-full rounded-lg bg-surface px-3 py-2 font-mono text-sm text-fg ring ring-line focus:ring-2 focus:ring-accent focus:outline-none"
+            />
+          </label>
           <button
             type="submit"
-            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500"
+            className="group relative h-9 overflow-hidden rounded-lg bg-accent-fill px-4 text-sm font-medium text-white ring ring-accent-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            Connect
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 rounded-[inherit] bg-linear-to-b from-accent-grad to-accent shadow-[inset_0_1px_0_0_var(--color-accent-fill)] group-hover:from-accent-fill"
+            />
+            <span className="relative">Connect</span>
           </button>
         </form>
 
-        <div className="mt-8 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/30">
-          <p className="font-medium text-amber-900 dark:text-amber-300">
-            You probably do not need this page
-          </p>
-          <p className="mt-1 text-amber-800 dark:text-amber-400">
-            Running <code className="font-mono">local-cf</code> already serves the identical
-            dashboard at <code className="font-mono">/__local-cf/ui/</code> on your own machine,
+        <div className="mt-8 rounded-lg bg-surface px-5 py-4 text-sm ring ring-warning/30">
+          <p className="font-semibold text-warning">You probably do not need this page</p>
+          <p className="mt-1 text-fg-subtle">
+            Running <code className="font-mono text-[0.9em]">local-cf</code> already serves the
+            identical dashboard at{" "}
+            <code className="font-mono text-[0.9em]">/__local-cf/ui/</code> on your own machine,
             offline and without a cross-origin hop. This hosted copy exists so you can try the UI
             before installing anything.
           </p>

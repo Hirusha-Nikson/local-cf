@@ -17,7 +17,7 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
             <li key={page.href}>
               <Link
                 href={page.href}
-                className="block rounded-md px-2 py-1.5 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                className="block rounded-md px-2 py-1.5 text-fg-subtle hover:bg-tint hover:text-fg"
               >
                 {page.label}
               </Link>

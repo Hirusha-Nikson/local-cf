@@ -63,9 +63,10 @@ export function QueuesView() {
             selected={binding}
             onSelect={setBinding}
             describe={(item) => item.queueName}
+            label="Producers"
           />
         ) : (
-          <p className="p-4 text-xs text-zinc-500">No producer bindings.</p>
+          <p className="px-5 py-4 text-sm text-fg-subtle">No producer bindings.</p>
         )
       }
     >
@@ -85,7 +86,7 @@ export function QueuesView() {
         }
         footer="Valid JSON is sent as a structured message; anything else is sent as a string."
       >
-        <div className="space-y-3 p-4">
+        <div className="space-y-3 px-5 py-4">
           <Textarea
             rows={9}
             spellCheck={false}
@@ -95,7 +96,7 @@ export function QueuesView() {
           />
           {send.error && <ErrorNote title="Send failed" detail={send.error} />}
           {sent > 0 && !send.error && (
-            <p className="text-sm text-emerald-700 dark:text-emerald-400">
+            <p className="text-sm text-success">
               Sent {sent} message{sent === 1 ? "" : "s"} this session. Watch the Logs tab to see
               your consumer pick them up.
             </p>

@@ -1,28 +1,41 @@
 /*
- * local-cf design tokens.
- *
- * Deliberately shaped after the Cloudflare dashboard so the studio feels like
- * part of the same toolchain: their orange as the single accent, their neutral
- * ramp, tight 6px radii, and flat surfaces separated by hairlines rather than
- * shadows.
- *
- * These override Tailwind's built-in orange-* and zinc-* scales rather than
- * introducing new names. That is the whole trick: every component in the app
- * already uses those scales, so re-skinning happens here in one place instead of
- * being chased through every view.
- *
- * Imported by both dashboard builds (offline export + hosted site).
- */
+ * local-cf design tokens.
+ *
+ * Values are taken from Cloudflare's own design system, Kumo (@cloudflare/kumo,
+ * MIT) — its `dist/styles/theme-kumo.css` token set and the compiled Button
+ * variants — rather than approximated by eye. We hand-author them here instead
+ * of depending on the package: the studio has no dialogs, popovers or menus, so
+ * there are no accessibility primitives to gain, and @local-cf/ui stays
+ * dependency-free and offline.
+ *
+ * Two things carry most of the weight:
+ *
+ * 1. We override Tailwind's built-in zinc-* scale with Kumo's neutral ramp, so
+ *    every existing `text-zinc-500` in the views re-skins from this one file
+ *    instead of being chased through each component.
+ * 2. Surface / line / text *roles* are plain custom properties that flip under
+ *    `.dark`, then re-exported through `@theme inline` so they also work as
+ *    Tailwind utilities (`bg-surface`, `ring-line`, `text-fg-subtle`).
+ *
+ * Imported by both dashboard builds (offline export + hosted site).
+ */
 
 /*
  * Manual light/dark/system control (see theme.ts / theme-context.tsx): every
  * `dark:` utility now targets this class instead of `prefers-color-scheme`
  * directly, so a user's explicit choice can override the OS.
+ *
+ * Kumo itself keys off a `data-mode` attribute; we keep the class because the
+ * pre-hydration init script and ThemeProvider already agree on it.
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    /* Cloudflare brand orange, used sparingly: primary actions and active state. */
+    /*
+     * Cloudflare brand orange. In Kumo this is `--text-color-kumo-brand` only:
+     * the wordmark and brand accents. Interactive emphasis is blue (below), so
+     * orange stays deliberately rare — the logo mark and the active nav item.
+     */
     --color-orange-50: #fff5eb;
     --color-orange-100: #ffe8d1;
     --color-orange-200: #ffd0a3;
@@ -35,22 +48,40 @@
     --color-orange-900: #7a3908;
     --color-orange-950: #3d1c04;
 
-    /* Cloudflare's neutral ramp. */
+    /*
+     * Kumo's neutral ramp — Tailwind's stock `neutral-*` rather than the warmer
+     * zinc. Nothing should reach for these directly any more; the semantic roles
+     * below are the interface. They stay mapped over zinc-* so that a stray
+     * `text-zinc-500` still lands on a Cloudflare value instead of Tailwind's.
+     */
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e3e3e3;
-    --color-zinc-300: #d9d9d9;
-    --color-zinc-400: #bfbfbf;
-    --color-zinc-500: #8c8c8c;
-    --color-zinc-600: #666666;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a1a1a1;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
     --color-zinc-700: #404040;
-    --color-zinc-800: #2b2b2b;
-    --color-zinc-900: #1d1d1d;
-    --color-zinc-950: #141414;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
 
-    /* Cloudflare uses blue for inline links, never the brand orange. */
-    --color-link: #0051c3;
-    --color-link-dark: #74a8ff;
+    /*
+     * `--color-kumo-brand`. The compiled Button resolves
+     * variant="primary" to this token, so it — not orange — is what a primary
+     * action and a focus ring look like on the current Cloudflare dashboard.
+     */
+    --color-accent: #056dff;
+    --color-accent-hover: #1447e6;
+
+    /*
+     * Kumo derives the primary button's fill from the accent with color-mix:
+     * a lighter body, a slightly darker ring, and a top-to-bottom gradient that
+     * ends on the pure accent. Precomputed here so the Button stays declarative.
+     */
+    --color-accent-fill: color-mix(in oklch, #056dff, white 30%);
+    --color-accent-ring: color-mix(in oklch, #056dff, black 10%);
+    --color-accent-grad: color-mix(in oklch, #056dff, white 15%);
 
     --font-sans:
         "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
@@ -58,28 +89,101 @@
     --font-mono:
         ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
 
-    /* Flatter than Tailwind's defaults — the dashboard is dense and utilitarian. */
+    /* Kumo's control radii: 8px on default/large controls, 6px on small ones. */
     --radius-md: 0.375rem;
     --radius-lg: 0.5rem;
 }
 
-/* Surface roles, so views never hard-code a background. */
+/*
+ * Semantic roles. Defined as raw properties so `.dark` can swap them, then
+ * surfaced as utilities by the `@theme inline` block below.
+ *
+ * canvas   — the page behind everything
+ * surface  — cards, sidebar, header (Kumo's `base`)
+ * elevated — a hair off canvas, for chrome that should not read as a card
+ * recessed — insets: table headers, card footers, code wells
+ * tint     — hover fill on quiet controls
+ * fill     — filled-but-inert chips and tracks
+ * line     — the ring on cards and controls (translucent in light mode)
+ * hairline — solid divider between rows and sections
+ */
 :root {
-    --surface-page: #f5f5f5;
-    --surface-raised: #ffffff;
-    --surface-sunken: #fafafa;
-    --surface-sidebar: #ffffff;
-    --border-subtle: #e3e3e3;
-    --border-strong: #d9d9d9;
+    --canvas: #fbfbfb;
+    --surface: #ffffff;
+    --elevated: #f8f8f8;
+    --recessed: #f2f2f2;
+    --tint: #f5f5f5;
+    --fill: #e5e5e5;
+    --interact: #d4d4d4;
+    --contrast: #0a0a0a;
+
+    --line: rgb(10 10 10 / 0.1);
+    --hairline: #e9e9e9;
+
+    --fg: #18181b;
+    --fg-strong: #0a0a0a;
+    --fg-subtle: #737373;
+    --fg-muted: #a1a1a1;
+    --fg-faint: #d4d4d4;
+
+    --link: #193cb8;
+    --danger: #c10007;
+    --success: #006045;
+    --warning: #bd6500;
 }
 
 :root.dark {
-    --surface-page: #141414;
-    --surface-raised: #1d1d1d;
-    --surface-sunken: #232323;
-    --surface-sidebar: #1d1d1d;
-    --border-subtle: #2f2f2f;
-    --border-strong: #3a3a3a;
+    --canvas: #030303;
+    --surface: #0f0f0f;
+    --elevated: #060606;
+    --recessed: #0b0b0b;
+    --tint: #262626;
+    --fill: #262626;
+    --interact: #404040;
+    --contrast: #fbfbfb;
+
+    --line: #333333;
+    --hairline: #262626;
+
+    --fg: #f5f5f5;
+    --fg-strong: #fafafa;
+    --fg-subtle: #a1a1a1;
+    --fg-muted: #737373;
+    --fg-faint: #404040;
+
+    --link: #51a2ff;
+    --danger: #ff6467;
+    --success: #a4f4cf;
+    --warning: #ff8904;
+}
+
+/*
+ * `inline` matters here: it makes utilities reference `var(--line)` directly
+ * rather than a frozen copy, so they follow the `.dark` swap above.
+ */
+@theme inline {
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-elevated: var(--elevated);
+    --color-recessed: var(--recessed);
+    --color-tint: var(--tint);
+    --color-fill: var(--fill);
+    --color-interact: var(--interact);
+    --color-contrast: var(--contrast);
+
+    --color-line: var(--line);
+    --color-hairline: var(--hairline);
+
+    --color-fg: var(--fg);
+    --color-fg-strong: var(--fg-strong);
+    --color-fg-subtle: var(--fg-subtle);
+    --color-fg-muted: var(--fg-muted);
+    --color-fg-faint: var(--fg-faint);
+
+    --color-link: var(--link);
+    --color-danger: var(--danger);
+    --color-success: var(--success);
+    --color-warning: var(--warning);
 }
 
 @layer base {
@@ -88,7 +192,8 @@
     }
 
     body {
-        background: var(--surface-page);
+        background: var(--canvas);
+        color: var(--fg);
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
     }
@@ -102,16 +207,29 @@
         background: var(--color-orange-200);
         color: var(--color-zinc-900);
     }
+
+    /*
+     * Kumo gives every enabled interactive element a pointer cursor rather than
+     * relying on each component to remember.
+     */
+    :where(a[href], button, select, summary, [role="button"], [role="tab"], [role="radio"]):where(
+            :not(:disabled),
+            :not([disabled]),
+            :not([aria-disabled="true"])
+        ) {
+        cursor: pointer;
+    }
+
+    :where(button, [role="button"], [role="tab"], [role="radio"]):disabled {
+        cursor: not-allowed;
+    }
 }
 
-@utility surface {
-    background: var(--surface-raised);
-}
-
-@utility surface-sunken {
-    background: var(--surface-sunken);
-}
-
+/*
+ * Surfaces are reached through `bg-surface` / `bg-recessed` from the roles
+ * above. This one stays a named utility because `border-hairline` would read as
+ * a width, and the divider colour is deliberately not the same as `--line`.
+ */
 @utility hairline {
-    border-color: var(--border-subtle);
+    border-color: var(--hairline);
 }
