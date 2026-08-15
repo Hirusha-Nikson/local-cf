@@ -128,7 +128,7 @@
 
     --link: #193cb8;
     --danger: #c10007;
-    --success: #006045;
+    --success: #009269;
     --warning: #bd6500;
 }
 
@@ -212,11 +212,9 @@
      * Kumo gives every enabled interactive element a pointer cursor rather than
      * relying on each component to remember.
      */
-    :where(a[href], button, select, summary, [role="button"], [role="tab"], [role="radio"]):where(
-            :not(:disabled),
-            :not([disabled]),
-            :not([aria-disabled="true"])
-        ) {
+    :where(a[href], button, select, summary, [role="button"], [role="tab"], [role="radio"]):where( :not(:disabled),
+        :not([disabled]),
+        :not([aria-disabled="true"])) {
         cursor: pointer;
     }
 
