@@ -1,32 +1,29 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
-
-const PAGES = [
-  { href: "/docs", label: "Introduction" },
-  { href: "/docs/getting-started", label: "Getting started" },
-  { href: "/docs/modes", label: "Modes A / B / C" },
-  { href: "/docs/architecture", label: "Architecture" },
-];
+import { DocsMeta, DocsNav, DocsPager } from "../../components/docs-nav";
+import { TableOfContents } from "../../components/table-of-contents";
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 md:flex-row">
-      <nav className="shrink-0 md:w-48">
-        <ul className="space-y-1 text-sm">
-          {PAGES.map((page) => (
-            <li key={page.href}>
-              <Link
-                href={page.href}
-                className="block rounded-md px-2 py-1.5 text-fg-subtle hover:bg-tint hover:text-fg"
-              >
-                {page.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+    /*
+     * Three columns from `xl` (nav / article / contents), two from `md`, and a
+     * single stack below that where the nav collapses behind the page name.
+     * The article column is capped so prose never runs past a comfortable
+     * measure on a wide screen.
+     */
+    <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10 md:py-10 xl:grid-cols-[13rem_minmax(0,1fr)_14rem]">
+      <div className="md:min-w-0">
+        <DocsNav />
+      </div>
 
-      <article className="min-w-0 flex-1">{children}</article>
+      <article className="min-w-0 max-w-3xl">
+        <DocsMeta />
+        {children}
+        <DocsPager />
+      </article>
+
+      <div className="hidden xl:block">
+        <TableOfContents />
+      </div>
     </main>
   );
 }

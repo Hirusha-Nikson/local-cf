@@ -1,0 +1,107 @@
+[
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "One runtime, two workers",
+    "id": "one-runtime-two-workers",
+    "text": "The sidecar is the entry worker. Anything outside /local-cf is forwarded to your worker over a service binding, which is how one port serves both. Binding identity is mirrored verbatim from your config onto the sidecar. That mirroring is the whole trick: Miniflare resolves two workers declaring the same databaseid to t"
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "The Node bridge",
+    "id": "the-node-bridge",
+    "text": "workerd cannot read the filesystem, see Miniflare's log stream, or restart the runtime — but the dashboard needs all three (migration files, the log tail, snapshot restore). Miniflare's function-form service bindings solve this without a second server: The sidecar calls env.BRIDGE.fetch(...) and lands directly in the N"
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "Typed end to end",
+    "id": "typed-end-to-end",
+    "text": "The sidecar is a Hono app; the dashboard consumes it with hc<ApiType: Query strings and JSON bodies are validated on the routes, which is what puts them into the client's signature — a typo is a build error, not a runtime surprise."
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "Two builds of one component tree",
+    "id": "two-builds-of-one-component-tree",
+    "text": "The dashboard is a single page whose tabs are component state, not routes. That has one deliberate consequence: the same React tree builds twice — static-exported into the npm package for offline use, and compiled into this site's /app route by OpenNext — with no adapter layer between them. The only environment-specifi"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "1. Run it",
+    "id": "1-run-it",
+    "text": "From the directory containing your wrangler config: You will get one port serving two things: | URL | What it is | | --- | --- | | http://127.0.0.1:8787/ | your worker | | http://127.0.0.1:8787/local-cf/ui/ | the studio | Requests outside /local-cf are forwarded to your worker over a service binding, which is why a sin"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "2. Options",
+    "id": "2-options",
+    "text": ""
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "3. D1 migrations",
+    "id": "3-d1-migrations",
+    "text": "Put .sql files in the directory named by migrationsdir (default migrations/). The Migrations tab lists them, marks which have been applied, and applies pending ones one at a time. Applied migrations are tracked in a d1migrations table, the same convention Wrangler uses, so the two do not fight. Multi-statement files wo"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "4. Snapshots",
+    "id": "4-snapshots",
+    "text": "Before a risky change, take a snapshot from the Snapshots & audit tab. A snapshot is a copy of the whole persist directory (.wrangler/state/v3), so it captures D1, KV, R2 and Durable Object storage together. Restoring stops the runtime, swaps the directory, and starts it again — in-memory Durable Object state does not "
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "5. Remote mode",
+    "id": "5-remote-mode",
+    "text": "To browse the real resources in your Cloudflare account instead: The token needs D1 Edit, Workers KV Storage Edit and Workers R2 Storage Edit. It stays in the Node process and is never sent to the browser."
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "Mode A — shared runtime (local-cf)",
+    "id": "mode-a--shared-runtime-local-cf",
+    "text": "We own the dev process. One Miniflare instance hosts your worker and the sidecar together, with the sidecar's bindings pointing at the same resource identities. D1, KV, R2: the same objects, not a copy Durable Objects: live, including in-memory state that has not been checkpointed Queues: live producers; your consumer "
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "Mode B — attached (local-cf attach)",
+    "id": "mode-b--attached-local-cf-attach",
+    "text": "Your own pipeline already runs Miniflare — OpenNext, Nuxt, a custom harness. We cannot inject into that process, so local-cf starts a separate Miniflare instance pointed at the same .wrangler/state/v3 directory. D1, KV, R2: shared through files. Correct, but a write is only visible once the other process flushes it Dur"
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "Mode C — remote (local-cf remote)",
+    "id": "mode-c--remote-local-cf-remote",
+    "text": "No local runtime at all. The sidecar's routes proxy to the Cloudflare REST API with a stored API token. D1, KV, R2: your real account Durable Objects, Queues: no REST API equivalent, so not browsable Route shapes are identical to local mode, so the dashboard code path barely branches — only the data source underneath c"
+  },
+  {
+    "path": "/docs",
+    "page": "Introduction",
+    "heading": "What makes it different",
+    "id": "what-makes-it-different",
+    "text": "Most local tooling shows you a copy of your data: a separate process reads the same SQLite file and hopes it stays in sync. local-cf does something narrower and stronger. In its default mode it boots one workerd runtime containing two workers: your worker, built from your wrangler.toml / wrangler.jsonc a small Hono sid"
+  },
+  {
+    "path": "/docs",
+    "page": "Introduction",
+    "heading": "What it will not pretend to do",
+    "id": "what-it-will-not-pretend-to-do",
+    "text": "There is no runtime API for reading another Durable Object's storage, so the Durable Objects view addresses and probes instances rather than claiming to browse their state. Attach mode shares files, not memory, and says so on every binding. See Modes."
+  },
+  {
+    "path": "/docs",
+    "page": "Introduction",
+    "heading": "Install",
+    "id": "install",
+    "text": "Run it in the directory containing your wrangler.toml or wrangler.jsonc. Nothing is uploaded, and no Cloudflare account is required."
+  }
+]
