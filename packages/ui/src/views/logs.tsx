@@ -8,17 +8,17 @@ import { useInterval } from "../hooks";
 import { useStudio } from "../studio-context";
 
 const LEVEL_STYLE: Record<LogEntry["level"], string> = {
-  debug: "text-zinc-500",
-  info: "text-zinc-700 dark:text-zinc-300",
-  warn: "text-amber-600 dark:text-amber-400",
-  error: "text-red-600 dark:text-red-400",
+  debug: "text-fg-subtle",
+  info: "text-fg",
+  warn: "text-warning",
+  error: "text-danger",
 };
 
 const LEVEL_CHIP: Record<LogEntry["level"], string> = {
-  debug: "text-zinc-500",
-  info: "text-sky-600 dark:text-sky-400",
-  warn: "text-amber-600 dark:text-amber-400",
-  error: "text-red-600 dark:text-red-400",
+  debug: "text-fg-subtle",
+  info: "text-link",
+  warn: "text-warning",
+  error: "text-danger",
 };
 
 /**
@@ -71,7 +71,7 @@ export function LogsView() {
     : entries;
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="px-4 py-5 md:px-6">
       <Card
         title={
           <span className="flex items-center gap-2">
@@ -79,13 +79,13 @@ export function LogsView() {
             <span
               className={cx(
                 "inline-flex items-center gap-1.5 text-xs font-normal",
-                paused ? "text-zinc-500" : "text-emerald-600 dark:text-emerald-400",
+                paused ? "text-fg-subtle" : "text-success",
               )}
             >
               <span
                 className={cx(
                   "size-1.5 rounded-full",
-                  paused ? "bg-zinc-400" : "animate-pulse bg-emerald-500",
+                  paused ? "bg-fg-muted" : "motion-safe:animate-pulse bg-success",
                 )}
               />
               {paused ? "Paused" : "Live"}
@@ -112,7 +112,7 @@ export function LogsView() {
         footer={`${visible.length} of ${entries.length} lines${filter ? " (filtered)" : ""}`}
       >
         {error && (
-          <p className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400">
+          <p className="border-b px-5 py-2 text-sm text-danger hairline">
             {error}
           </p>
         )}
@@ -120,10 +120,10 @@ export function LogsView() {
         {visible.length === 0 ? (
           <Empty>No log output yet. Make a request to your worker, or send a queue message.</Empty>
         ) : (
-          <div className="max-h-[calc(100vh-18rem)] overflow-auto px-4 py-2 font-mono text-xs leading-relaxed">
+          <div className="max-h-[calc(100vh-18rem)] overflow-auto px-5 py-3 font-mono text-sm leading-relaxed">
             {visible.map((entry) => (
               <p key={entry.seq} className="flex gap-3 py-px">
-                <span className="w-20 shrink-0 text-zinc-400 dark:text-zinc-600">
+                <span className="w-20 shrink-0 text-fg-muted">
                   {new Date(entry.ts).toLocaleTimeString()}
                 </span>
                 <span className={cx("w-12 shrink-0 uppercase", LEVEL_CHIP[entry.level])}>

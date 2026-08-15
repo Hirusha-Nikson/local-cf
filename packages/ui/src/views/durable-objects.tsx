@@ -103,6 +103,7 @@ export function DurableObjectsView() {
           selected={binding}
           onSelect={setBinding}
           describe={(item) => item.className}
+          label="Namespaces"
         />
       }
     >
@@ -116,7 +117,7 @@ export function DurableObjectsView() {
       )}
 
       <Card title="Instance">
-        <div className="space-y-3 p-4">
+        <div className="space-y-3 px-5 py-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-48 flex-1">
               <Field label="Name (idFromName)">
@@ -133,7 +134,7 @@ export function DurableObjectsView() {
           </div>
 
           {resolvedId && (
-            <p className="rounded-md border px-3 py-2 font-mono text-xs break-all hairline surface-sunken">
+            <p className="rounded-lg px-3 py-2 font-mono text-sm break-all ring ring-line bg-recessed">
               {resolvedId}
             </p>
           )}
@@ -158,7 +159,7 @@ export function DurableObjectsView() {
           </>
         }
       >
-        <div className="space-y-3 p-4">
+        <div className="space-y-3 px-5 py-4">
           <div className="flex flex-wrap gap-2">
             <Select
               value={method}
@@ -196,15 +197,15 @@ export function DurableObjectsView() {
                 <Tag
                   className={
                     result.status < 400
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-400"
-                      : "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400"
+                      ? "text-success ring-success/30"
+                      : "text-danger ring-danger/30"
                   }
                 >
                   {result.status}
                 </Tag>
                 <Tag>{result.durationMs}ms</Tag>
               </p>
-              <pre className="max-h-96 overflow-auto rounded-md border p-3 font-mono text-xs hairline surface-sunken">
+              <pre className="max-h-96 overflow-auto rounded-lg px-4 py-3 font-mono text-sm ring ring-line bg-recessed">
                 {prettyJson(result.body)}
               </pre>
             </div>

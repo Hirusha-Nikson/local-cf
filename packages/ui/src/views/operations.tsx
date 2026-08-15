@@ -75,7 +75,7 @@ export function OperationsView() {
   const remoteMode = meta?.mode === "remote";
 
   return (
-    <div className="grid gap-4 p-4 lg:grid-cols-2">
+    <div className="grid gap-4 px-4 py-5 md:px-6 lg:grid-cols-2">
       <div className="space-y-4">
         <Card
           title="Snapshots"
@@ -98,9 +98,9 @@ export function OperationsView() {
             </>
           }
         >
-          <div className="space-y-2 p-4">
+          <div className="space-y-2 px-5 py-4">
             {remoteMode && (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-fg-subtle">
                 Snapshots copy the local persist directory, so they do not apply in remote mode.
               </p>
             )}
@@ -112,7 +112,7 @@ export function OperationsView() {
             )}
 
             {restoring && (
-              <p className="flex items-center gap-2 rounded-md bg-orange-500/10 px-3 py-2 text-sm text-orange-700 dark:text-orange-400">
+              <p className="flex items-center gap-2 rounded-lg bg-surface px-4 py-2.5 text-sm text-warning ring ring-warning/30">
                 <Spinner />
                 Restoring &ldquo;{restoring}&rdquo; — the runtime is restarting…
               </p>
@@ -123,7 +123,7 @@ export function OperationsView() {
             ) : (snapshots.data?.snapshots.length ?? 0) === 0 ? (
               <Empty>No snapshots yet.</Empty>
             ) : (
-              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              <ul className="divide-y hairline">
                 {snapshots.data?.snapshots.map((snapshot) => (
                   <li
                     key={snapshot.name}
@@ -131,7 +131,7 @@ export function OperationsView() {
                   >
                     <span>
                       <span className="font-mono text-sm">{snapshot.name}</span>
-                      <span className="ml-2 text-xs text-zinc-500">
+                      <span className="ml-2 text-sm text-fg-subtle">
                         {new Date(snapshot.createdAt).toLocaleString()}
                       </span>
                     </span>
@@ -151,7 +151,7 @@ export function OperationsView() {
               </ul>
             )}
 
-            <p className="text-xs text-zinc-500">
+            <p className="text-sm text-fg-subtle">
               Restoring stops the runtime, swaps the persist directory and starts it again — open
               connections and in-memory Durable Object state are lost by design.
             </p>
@@ -164,7 +164,7 @@ export function OperationsView() {
         actions={<Button variant="ghost" onClick={() => audit.reload()}>Refresh</Button>}
       >
         {undo.error && (
-          <div className="p-4">
+          <div className="px-5 py-4">
             <ErrorNote title="Undo failed" detail={undo.error} />
           </div>
         )}
@@ -176,20 +176,20 @@ export function OperationsView() {
             No writes recorded yet. Every change made through this dashboard is logged here.
           </Empty>
         ) : (
-          <ul className="max-h-[32rem] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800/60">
+          <ul className="max-h-[32rem] divide-y overflow-y-auto hairline">
             {audit.data?.entries.map((entry) => (
-              <li key={entry.seq} className="flex items-start justify-between gap-3 px-4 py-2.5">
+              <li key={entry.seq} className="flex items-start justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2">
                     <Tag>{entry.action}</Tag>
-                    <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
+                    <span className="font-mono text-sm text-fg-subtle">
                       {entry.binding}
                     </span>
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-sm text-fg-muted">
                       {new Date(entry.ts).toLocaleTimeString()}
                     </span>
                   </p>
-                  <p className="mt-1 truncate font-mono text-xs text-zinc-500">{entry.detail}</p>
+                  <p className="mt-1 truncate font-mono text-sm text-fg-subtle">{entry.detail}</p>
                 </div>
                 {entry.undo && (
                   <Button

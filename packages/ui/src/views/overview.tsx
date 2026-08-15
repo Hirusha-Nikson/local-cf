@@ -91,17 +91,17 @@ function describeTimeAgo(timestamp: number | null): string {
   return `${hours}h ago`;
 }
 
-/** Flat CF-style stat tile: small-caps label, big number, no shadow or gradient. */
+/**
+ * Flat stat tile: sentence-case label, big number, no shadow or gradient. The
+ * label sits tight against its value because they are one thought; the detail
+ * line is what gets the extra breathing room.
+ */
 function StatTile({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
   return (
-    <div className="rounded-lg border px-4 py-3 hairline surface">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-        {label}
-      </p>
-      <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-50">
-        {value}
-      </p>
-      {detail && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{detail}</p>}
+    <div className="rounded-lg bg-surface px-5 py-4 ring ring-line">
+      <p className="text-sm text-fg-subtle">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-fg-strong">{value}</p>
+      {detail && <p className="mt-2 text-sm text-fg-subtle">{detail}</p>}
     </div>
   );
 }
@@ -118,19 +118,18 @@ function ActivityItem({
   meta?: string;
 }) {
   const dot =
-    tone === "success"
-      ? "bg-emerald-500"
-      : tone === "warn"
-        ? "bg-amber-500"
-        : "bg-sky-500";
+    tone === "success" ? "bg-success" : tone === "warn" ? "bg-warning" : "bg-link";
 
   return (
-    <li className="flex items-start gap-3 py-2">
-      <span className={cx("mt-1 size-2 rounded-full", dot)} />
+    <li className="flex items-start gap-3 px-5 py-3">
+      {/* h-lh keeps the dot centred on the first line when the title wraps. */}
+      <span className="flex h-lh shrink-0 items-center">
+        <span className={cx("size-2 rounded-full", dot)} />
+      </span>
       <div className="min-w-0">
-        <p className="font-medium text-zinc-900 dark:text-zinc-100">{title}</p>
-        {detail && <p className="mt-0.5 break-words text-xs text-zinc-500 dark:text-zinc-400">{detail}</p>}
-        {meta && <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-zinc-400">{meta}</p>}
+        <p className="text-sm font-medium text-fg-strong">{title}</p>
+        {detail && <p className="mt-0.5 text-sm break-words text-fg-subtle">{detail}</p>}
+        {meta && <p className="mt-0.5 text-sm text-fg-muted">{meta}</p>}
       </div>
     </li>
   );
@@ -246,8 +245,8 @@ export function OverviewView() {
         <Skeleton className="h-4 w-full max-w-2xl" />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="rounded-lg border px-4 py-3 hairline surface">
-              <Skeleton className="h-3 w-20" />
+            <div key={index} className="rounded-lg bg-surface px-5 py-4 ring ring-line">
+              <Skeleton className="h-3.5 w-20" />
               <Skeleton className="mt-2.5 h-7 w-14" />
             </div>
           ))}
@@ -260,11 +259,12 @@ export function OverviewView() {
     return (
       <div className="p-4 md:p-6">
         <Card title="Not connected">
-          <div className="space-y-2 p-4 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="space-y-2 px-5 py-4 text-sm text-fg-subtle">
             <p>{error ?? "No studio metadata available."}</p>
             <p>
               Start it with{" "}
-              <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-orange-700 dark:bg-zinc-800 dark:text-orange-400">
+              {/* Monospace runs large next to body text; 0.9em evens them out. */}
+              <code className="rounded-md bg-recessed px-1.5 py-0.5 font-mono text-[0.9em] text-fg">
                 npx local-cf
               </code>{" "}
               in your worker&rsquo;s directory, then reload this page.
@@ -279,7 +279,7 @@ export function OverviewView() {
   const lastSyncText = syncing ? "Syncing now" : `Updated ${describeTimeAgo(lastUpdatedAt)}`;
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
+    <div className="space-y-5 px-4 py-5 md:px-6">
       {error && (
         <Callout tone="warn" title="Background refresh stalled">
           {error}
@@ -293,7 +293,7 @@ export function OverviewView() {
           <ModeBadge mode={meta.mode} />
           <Tag>{lastSyncText}</Tag>
         </div>
-        <p className="max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">{mode.body}</p>
+        <p className="max-w-2xl text-sm leading-6 text-fg-subtle">{mode.body}</p>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile label="Bindings" value={storageBindings.length} detail="declared in wrangler config" />
@@ -320,12 +320,10 @@ export function OverviewView() {
           ) : (
             <ul className="divide-y hairline">
               {bindingRows.map((row) => (
-                <li key={row.kind} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <li key={row.kind} className="flex flex-wrap items-center gap-3 px-5 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{KIND_LABEL[row.kind]}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                      {row.sample}
-                    </p>
+                    <p className="text-sm font-medium text-fg-strong">{KIND_LABEL[row.kind]}</p>
+                    <p className="mt-0.5 text-sm text-fg-subtle">{row.sample}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Tag>{row.count}</Tag>
@@ -344,26 +342,23 @@ export function OverviewView() {
         <div className="space-y-4">
           <Card
             title="Live activity"
-            actions={syncing ? <Spinner className="text-zinc-500" /> : <Tag>{lastSyncText}</Tag>}
+            actions={syncing ? <Spinner className="text-fg-subtle" /> : <Tag>{lastSyncText}</Tag>}
           >
             {logError && (
-              <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
-                {logError}
-              </div>
+              <div className="border-b px-5 py-2 text-sm text-warning hairline">{logError}</div>
             )}
             {logEntries.length === 0 ? (
               <Empty>No log output yet. Make a request to your worker, or send a queue message.</Empty>
             ) : (
-              <ul className="divide-y hairline px-4 py-2 text-xs">
+              <ul className="divide-y px-5 py-2 font-mono text-sm hairline">
                 {logEntries.map((entry) => (
                   <li key={entry.seq} className="flex gap-3 py-2">
-                    <span className="w-16 shrink-0 text-zinc-400">{new Date(entry.ts).toLocaleTimeString()}</span>
-                    <span className="w-12 shrink-0 uppercase text-sky-600 dark:text-sky-400">
-                      {entry.level}
+                    <span className="w-16 shrink-0 text-fg-muted">
+                      {new Date(entry.ts).toLocaleTimeString()}
                     </span>
-                    <span className="min-w-0 break-all text-zinc-700 dark:text-zinc-300">
-                      {entry.message}
-                    </span>
+                    {/* Uppercasing the level is data formatting, not a heading. */}
+                    <span className="w-12 shrink-0 text-link uppercase">{entry.level}</span>
+                    <span className="min-w-0 break-all text-fg">{entry.message}</span>
                   </li>
                 ))}
               </ul>
@@ -400,16 +395,14 @@ export function OverviewView() {
       </div>
 
       <Card title="Connection details">
-        <dl className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Config</dt>
-            <dd className="mt-1 break-all font-mono text-xs text-zinc-800 dark:text-zinc-200">
-              {meta.configPath ?? "—"}
-            </dd>
+        <dl className="grid gap-3 px-5 py-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg bg-recessed px-4 py-3 ring ring-line">
+            <dt className="text-sm text-fg-subtle">Config</dt>
+            <dd className="mt-1 font-mono text-sm break-all text-fg">{meta.configPath ?? "—"}</dd>
           </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Persist root</dt>
-            <dd className="mt-1 break-all font-mono text-xs text-zinc-800 dark:text-zinc-200">
+          <div className="rounded-lg bg-recessed px-4 py-3 ring ring-line">
+            <dt className="text-sm text-fg-subtle">Persist root</dt>
+            <dd className="mt-1 font-mono text-sm break-all text-fg">
               {meta.persistRoot ?? "Remote mode uses Cloudflare storage"}
             </dd>
           </div>
@@ -418,7 +411,7 @@ export function OverviewView() {
 
       {variableBindings.length > 0 && (
         <Card title={`Vars (${variableBindings.length})`}>
-          <div className="flex flex-wrap gap-2 p-4">
+          <div className="flex flex-wrap gap-2 px-5 py-4">
             {variableBindings.map((binding) => (
               <Tag key={binding.binding}>
                 {binding.binding} = {"target" in binding ? binding.target : ""}

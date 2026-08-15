@@ -61,8 +61,7 @@ export function KVView() {
   return (
     <div className="grid grid-cols-1 md:h-full md:grid-cols-[220px_260px_minmax(0,1fr)]">
       <aside
-        className="border-b hairline md:sticky md:top-0 md:h-full md:overflow-y-auto md:border-b-0 md:border-r"
-        style={{ background: "var(--surface-raised)" }}
+        className="border-b bg-surface hairline md:sticky md:top-0 md:h-full md:overflow-y-auto md:border-r md:border-b-0"
       >
         <BindingList
           bindings={bindings}
@@ -72,12 +71,12 @@ export function KVView() {
             setSelectedKey(null);
           }}
           describe={(item) => item.namespaceId}
+          label="Namespaces"
         />
       </aside>
 
       <section
-        className="flex min-h-0 flex-col border-b hairline md:sticky md:top-0 md:h-full md:border-b-0 md:border-r"
-        style={{ background: "var(--surface-raised)" }}
+        className="flex min-h-0 flex-col border-b bg-surface hairline md:sticky md:top-0 md:h-full md:border-r md:border-b-0"
       >
         <div className="border-b p-2 hairline">
           <Input
@@ -92,7 +91,7 @@ export function KVView() {
           {keys.loading ? (
             <SkeletonList rows={8} />
           ) : keys.error ? (
-            <div className="p-3">
+            <div className="px-4 py-3">
               <ErrorNote title="Could not list keys" detail={keys.error} />
             </div>
           ) : (keys.data?.keys.length ?? 0) === 0 ? (
@@ -106,10 +105,11 @@ export function KVView() {
                     onClick={() => setSelectedKey(key.name)}
                     aria-current={key.name === selectedKey ? "true" : undefined}
                     className={cx(
-                      "w-full truncate rounded px-2 py-1.5 text-left font-mono text-xs transition-colors",
+                      "w-full truncate rounded-md px-2 py-1.5 text-left font-mono text-sm",
+                      "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
                       key.name === selectedKey
-                        ? "bg-orange-50 font-medium text-orange-800 dark:bg-orange-500/10 dark:text-orange-400"
-                        : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
+                        ? "bg-tint font-medium text-fg-strong"
+                        : "text-fg hover:bg-tint",
                     )}
                   >
                     {key.name}
@@ -120,28 +120,28 @@ export function KVView() {
           )}
         </div>
 
-        <div className="border-t px-3 py-2 hairline surface-sunken">
+        <div className="border-t px-3 py-2 hairline bg-recessed">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-zinc-500">
+            <span className="text-sm text-fg-subtle">
               {keys.data?.keys.length ?? 0} key{(keys.data?.keys.length ?? 0) === 1 ? "" : "s"}
             </span>
             <Button
               variant="ghost"
-              className="px-2 py-0.5 text-xs"
+              size="sm"
               onClick={() => setSelectedKey(null)}
             >
               + New key
             </Button>
           </div>
           {keys.data && !keys.data.listComplete && (
-            <p className="mt-1 text-[11px] text-zinc-500">
+            <p className="mt-1 text-sm text-fg-subtle">
               First 500 shown — narrow with a prefix to see more.
             </p>
           )}
         </div>
       </section>
 
-      <div className="min-w-0 space-y-4 p-4 md:p-6">
+      <div className="min-w-0 space-y-5 px-4 py-5 md:px-6">
         {binding && (
           <>
             <ValueEditor
@@ -250,7 +250,7 @@ function ValueEditor({
         </>
       }
     >
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 px-5 py-4">
         {(save.error || remove.error) && (
           <ErrorNote title="Write failed" detail={save.error ?? remove.error} />
         )}
@@ -293,7 +293,7 @@ function ValueEditor({
         </div>
 
         {isBinary && (
-          <p className="text-xs text-amber-700 dark:text-amber-500">
+          <p className="text-sm text-warning">
             This value is not valid UTF-8, so it is shown base64-encoded. Saving from here would
             store your edit as literal text — download it instead if you need to modify the bytes.
           </p>
@@ -341,15 +341,15 @@ function ImportExport({
         </>
       }
     >
-      <div className="space-y-3 p-4">
+      <div className="space-y-3 px-5 py-4">
         <div className="flex flex-wrap items-center gap-3">
           <a
             href={`${baseUrl}/kv/${encodeURIComponent(binding)}/export`}
-            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            className="inline-flex h-9 items-center rounded-lg bg-surface px-3 text-sm font-medium text-fg ring ring-line hover:bg-tint"
           >
             Export all as JSON
           </a>
-          <label className="cursor-pointer rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
+          <label className="inline-flex h-9 cursor-pointer items-center rounded-lg bg-surface px-3 text-sm font-medium text-fg ring ring-line hover:bg-tint">
             Import JSON…
             <input
               type="file"
@@ -366,7 +366,7 @@ function ImportExport({
         </div>
 
         {importJson.error && <ErrorNote title="Import failed" detail={importJson.error} />}
-        {status && <p className="text-sm text-emerald-700 dark:text-emerald-400">{status}</p>}
+        {status && <p className="text-sm text-success">{status}</p>}
       </div>
     </Card>
   );

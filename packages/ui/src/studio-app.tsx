@@ -1,6 +1,23 @@
 "use client";
 
+import {
+    Archive,
+    ChevronRight,
+    Database,
+    KeyRound,
+    LayoutDashboard,
+    ListOrdered,
+    Menu,
+    Package,
+    PanelLeftClose,
+    PanelLeftOpen,
+    RefreshCw,
+    ScrollText,
+    Box,
+    type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { Logo } from "./components/logo";
 import { cx, ModeBadge } from "./components/primitives";
 import { ThemeToggle } from "./components/theme-toggle";
 import { StudioProvider, useStudio } from "./studio-context";
@@ -14,45 +31,22 @@ import { QueuesView } from "./views/queues";
 import { R2View } from "./views/r2";
 
 /* -------------------------------------------------------------------------- */
-/* Icons — inline so the package stays dependency-free and the export offline. */
 
-function Icon({ path, className }: { path: string; className?: string }) {
-    return (
-        <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className={cx("size-4 shrink-0", className)}
-        >
-            <path d={path} />
-        </svg>
-    );
+/**
+ * Lucide at 1.75 stroke rather than its default 2 — closer to the lighter
+ * weight Cloudflare's own chrome uses, and it stops 16px icons reading heavier
+ * than the 14px label beside them.
+ */
+function Icon({ as: Glyph, className }: { as: LucideIcon; className?: string }) {
+    return <Glyph aria-hidden="true" strokeWidth={1.75} className={cx("size-4 shrink-0", className)} />;
 }
-
-const ICONS = {
-    overview: "M2 3.5h5v4H2zM9 3.5h5v9H9zM2 9.5h5v3H2z",
-    database:
-        "M8 1.8c3 0 5 .8 5 1.8s-2 1.8-5 1.8-5-.8-5-1.8S5 1.8 8 1.8ZM3 3.6v8.8c0 1 2 1.8 5 1.8s5-.8 5-1.8V3.6M3 8c0 1 2 1.8 5 1.8s5-.8 5-1.8",
-    key: "M9.5 2.5a4 4 0 1 0-3.2 6.4L2 13.2v1.3h1.9l.7-.7v-1.2h1.2l.9-.9V10.4h1.2l.7-.7a4 4 0 0 0 2.9-7.2Z",
-    bucket:
-        "M2.5 4h11l-1 9.5a1 1 0 0 1-1 .9H4.5a1 1 0 0 1-1-.9L2.5 4ZM5 4V2.6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V4",
-    cube: "M8 1.6 14 5v6l-6 3.4L2 11V5l6-3.4ZM2 5l6 3.4M14 5 8 8.4M8 8.4v6",
-    queue: "M2 4.5h12M2 8h12M2 11.5h8M12.5 10.5 14.5 12.5 12.5 14.5",
-    logs: "M3 2.5h10v11H3zM5.5 5.5h5M5.5 8h5M5.5 10.5h3",
-    archive: "M2 3.5h12v3H2zM3 6.5v7h10v-7M6.5 9h3",
-} as const;
 
 /* -------------------------------------------------------------------------- */
 
 interface Tab {
     id: string;
     label: string;
-    icon: string;
-    title: string;
+    icon: LucideIcon;
     description: string;
     countKinds?: string[];
     render: () => ReactNode;
@@ -65,8 +59,7 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "overview",
                 label: "Overview",
-                icon: ICONS.overview,
-                title: "Overview",
+                icon: LayoutDashboard,
                 description: "What local-cf is connected to, and how faithfully.",
                 render: () => <OverviewView />,
             },
@@ -78,8 +71,7 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "d1",
                 label: "D1",
-                icon: ICONS.database,
-                title: "D1",
+                icon: Database,
                 description: "Browse tables, run SQL and apply migrations.",
                 countKinds: ["d1"],
                 render: () => <D1View />,
@@ -87,8 +79,7 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "kv",
                 label: "KV",
-                icon: ICONS.key,
-                title: "KV",
+                icon: KeyRound,
                 description: "Inspect and edit keys, import and export namespaces.",
                 countKinds: ["kv"],
                 render: () => <KVView />,
@@ -96,8 +87,7 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "r2",
                 label: "R2",
-                icon: ICONS.bucket,
-                title: "R2",
+                icon: Package,
                 description: "List, upload, download and delete objects.",
                 countKinds: ["r2"],
                 render: () => <R2View />,
@@ -110,8 +100,7 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "do",
                 label: "Durable Objects",
-                icon: ICONS.cube,
-                title: "Durable Objects",
+                icon: Box,
                 description: "Resolve instance ids and send requests to a live object.",
                 countKinds: ["durable_object"],
                 render: () => <DurableObjectsView />,
@@ -119,8 +108,7 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "queues",
                 label: "Queues",
-                icon: ICONS.queue,
-                title: "Queues",
+                icon: ListOrdered,
                 description: "Send messages and review consumer configuration.",
                 countKinds: ["queue_producer", "queue_consumer"],
                 render: () => <QueuesView />,
@@ -133,16 +121,14 @@ const SECTIONS: { label: string | null; tabs: Tab[] }[] = [
             {
                 id: "logs",
                 label: "Logs",
-                icon: ICONS.logs,
-                title: "Logs",
+                icon: ScrollText,
                 description: "Live tail of your worker's console output.",
                 render: () => <LogsView />,
             },
             {
                 id: "ops",
                 label: "Snapshots & audit",
-                icon: ICONS.archive,
-                title: "Snapshots & audit",
+                icon: Archive,
                 description: "Capture and restore local state; review every write made here.",
                 render: () => <OperationsView />,
             },
@@ -167,6 +153,13 @@ function Sidebar({
     open: boolean;
     onClose: () => void;
 }) {
+    /*
+     * Rail mode is a desktop affordance only. On mobile the sidebar is already a
+     * drawer that slides away entirely, so every collapse-related class below is
+     * scoped to `md:` and the drawer keeps its full width.
+     */
+    const [collapsed, setCollapsed] = useState(false);
+
     return (
         <>
             {open && (
@@ -174,23 +167,26 @@ function Sidebar({
                     type="button"
                     aria-label="Close navigation"
                     onClick={onClose}
-                    className="fixed inset-0 z-20 bg-zinc-900/40 md:hidden"
+                    className="fixed inset-0 z-20 bg-black/50 md:hidden"
                 />
             )}
 
             <aside
                 className={cx(
-                    "fixed inset-y-0 left-0 z-30 flex h-screen w-60 shrink-0 flex-col border-r hairline",
-                    "transition-transform md:static md:h-full md:translate-x-0",
+                    "fixed inset-y-0 left-0 z-30 flex h-screen w-60 shrink-0 flex-col border-r bg-surface hairline",
+                    "transition-[width,transform] duration-200 md:static md:h-full md:translate-x-0",
                     open ? "translate-x-0" : "-translate-x-full",
+                    collapsed && "md:w-14",
                 )}
-                style={{ background: "var(--surface-sidebar)" }}
             >
-                <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4 hairline">
-                    <span className="grid size-6 shrink-0 place-items-center rounded bg-orange-500 text-[10px] font-bold text-white">
-                        cf
-                    </span>
-                    <span className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <div
+                    className={cx(
+                        "flex h-12 shrink-0 items-center gap-2 border-b px-4 hairline",
+                        collapsed && "md:justify-center md:px-0",
+                    )}
+                >
+                    <Logo />
+                    <span className={cx("font-semibold text-fg-strong", collapsed && "md:sr-only")}>
                         local-cf
                     </span>
                 </div>
@@ -199,9 +195,23 @@ function Sidebar({
                     {SECTIONS.map((section) => (
                         <div key={section.label ?? "root"} className="mb-1">
                             {section.label && (
-                                <p className="px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                                    {section.label}
-                                </p>
+                                <>
+                                    <p
+                                        className={cx(
+                                            "px-2.5 pt-4 pb-1.5 text-xs font-medium text-fg-subtle",
+                                            collapsed && "md:hidden",
+                                        )}
+                                    >
+                                        {section.label}
+                                    </p>
+                                    {/* The group still needs a boundary once its name is gone. */}
+                                    {collapsed && (
+                                        <div
+                                            aria-hidden="true"
+                                            className="mx-auto my-2 hidden h-px w-6 bg-hairline md:block"
+                                        />
+                                    )}
+                                </>
                             )}
 
                             {section.tabs.map((tab) => {
@@ -218,23 +228,44 @@ function Sidebar({
                                             onClose();
                                         }}
                                         aria-current={isActive ? "page" : undefined}
+                                        // The label is the accessible name; in rail mode it also
+                                        // has to be the tooltip, since nothing else names the icon.
+                                        title={collapsed ? tab.label : undefined}
                                         className={cx(
-                                            "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                                            "group relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm",
+                                            "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                                            collapsed && "md:justify-center md:px-0",
                                             isActive
-                                                ? "bg-orange-50 font-medium text-orange-700 dark:bg-orange-500/10 dark:text-orange-400"
-                                                : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
+                                                ? "bg-tint font-medium text-fg-strong"
+                                                : "text-fg hover:bg-tint",
                                         )}
                                     >
+                                        {/* Orange stays the brand mark: the rail and the active icon, nothing else. */}
                                         <span
                                             className={cx(
                                                 "absolute inset-y-1 left-0 w-0.5 rounded-full bg-orange-500",
                                                 isActive ? "opacity-100" : "opacity-0",
                                             )}
                                         />
-                                        <Icon path={tab.icon} className={isActive ? "text-orange-500" : "text-zinc-500"} />
-                                        <span className="truncate">{tab.label}</span>
+                                        <Icon
+                                            as={tab.icon}
+                                            className={isActive ? "text-orange-500" : "text-fg-subtle"}
+                                        />
+                                        {/*
+                                          `sr-only` rather than `hidden`: the button keeps its
+                                          accessible name in rail mode instead of becoming a
+                                          nameless icon.
+                                        */}
+                                        <span className={cx("truncate", collapsed && "md:sr-only")}>
+                                            {tab.label}
+                                        </span>
                                         {count !== undefined && count > 0 && (
-                                            <span className="ml-auto rounded bg-zinc-200 px-1.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                            <span
+                                                className={cx(
+                                                    "ml-auto rounded-md bg-fill px-1.5 text-xs font-medium text-fg-subtle",
+                                                    collapsed && "md:hidden",
+                                                )}
+                                            >
                                                 {count}
                                             </span>
                                         )}
@@ -245,9 +276,33 @@ function Sidebar({
                     ))}
                 </nav>
 
-                <p className="shrink-0 border-t px-4 py-2.5 text-[11px] text-zinc-500 hairline">
-                    Local only · nothing leaves your machine
-                </p>
+                <div className="shrink-0 border-t p-2 hairline">
+                    <button
+                        type="button"
+                        onClick={() => setCollapsed((value) => !value)}
+                        aria-expanded={!collapsed}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        className={cx(
+                            "hidden w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-fg-subtle md:flex",
+                            "hover:bg-tint hover:text-fg",
+                            "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                            collapsed && "md:justify-center md:px-0",
+                        )}
+                    >
+                        <Icon as={collapsed ? PanelLeftOpen : PanelLeftClose} />
+                        <span className={cx("truncate", collapsed && "md:sr-only")}>Collapse</span>
+                    </button>
+
+                    <p
+                        className={cx(
+                            "px-2.5 py-1 text-xs text-fg-subtle",
+                            collapsed && "md:hidden",
+                        )}
+                    >
+                        Local only · nothing leaves your machine
+                    </p>
+                </div>
             </aside>
         </>
     );
@@ -267,30 +322,26 @@ function Chrome() {
     }
 
     return (
-        <div className="flex h-screen overflow-hidden text-zinc-900 dark:text-zinc-100">
+        <div className="flex h-screen overflow-hidden text-fg">
             <Sidebar active={tab} onSelect={setTab} counts={counts} open={navOpen} onClose={() => setNavOpen(false)} />
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                <header
-                    className="flex h-12 shrink-0 items-center gap-3 border-b px-4 hairline"
-                    style={{ background: "var(--surface-raised)" }}
-                >
+                {/* Sticky chrome, so a border is what separates it from the content. */}
+                <header className="flex h-12 shrink-0 items-center gap-3 border-b bg-surface px-4 hairline">
                     <button
                         type="button"
                         aria-label="Open navigation"
                         onClick={() => setNavOpen(true)}
-                        className="-ml-1 rounded-md p-1.5 text-zinc-600 hover:bg-zinc-100 md:hidden dark:hover:bg-zinc-800"
+                        className="-ml-1 rounded-md p-1.5 text-fg-subtle hover:bg-tint md:hidden"
                     >
-                        <Icon path="M2 4h12M2 8h12M2 12h12" />
+                        <Icon as={Menu} />
                     </button>
 
                     {meta && (
                         <>
-                            <span className="truncate font-mono text-sm text-zinc-700 dark:text-zinc-300">
-                                {meta.workerName}
-                            </span>
+                            <span className="truncate font-mono text-sm text-fg">{meta.workerName}</span>
                             <ModeBadge mode={meta.mode} />
-                            <span className="hidden text-xs text-zinc-500 md:inline dark:text-zinc-400">
+                            <span className="hidden text-sm text-fg-subtle md:inline">
                                 {syncing
                                     ? "Syncing latest state"
                                     : lastUpdatedAt
@@ -305,11 +356,11 @@ function Chrome() {
                         onClick={refresh}
                         disabled={loading}
                         title="Reload studio metadata"
-                        className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                        className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-fg-subtle hover:bg-tint hover:text-fg disabled:opacity-50"
                     >
                         <Icon
-                            path="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3"
-                            className={cx("size-3.5", (loading || syncing) && "animate-spin")}
+                            as={RefreshCw}
+                            className={cx("size-3.5", (loading || syncing) && "motion-safe:animate-spin")}
                         />
                         {syncing ? "Syncing" : "Refresh"}
                     </button>
@@ -317,17 +368,21 @@ function Chrome() {
                     <ThemeToggle />
                 </header>
 
-                <div
-                    className="shrink-0 border-b px-4 py-4 hairline md:px-6"
-                    style={{ background: "var(--surface-raised)" }}
-                >
-                    <nav aria-label="Breadcrumb" className="mb-1.5 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <div className="shrink-0 border-b bg-surface px-4 py-3.5 hairline md:px-6">
+                    {/*
+                      The trail ends on the page's own name, so that crumb *is* the
+                      heading — marking it up as one keeps a single h1 on the page
+                      without repeating the title underneath.
+                    */}
+                    <nav
+                        aria-label="Breadcrumb"
+                        className="flex items-center gap-1.5 text-sm text-fg-subtle"
+                    >
                         <span>{meta?.workerName ?? "local-cf"}</span>
-                        <Icon path="M6 3.5 10 8l-4 4.5" className="size-3 shrink-0 text-zinc-400 dark:text-zinc-600" />
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">{active.label}</span>
+                        <Icon as={ChevronRight} className="size-3.5 text-fg-faint" />
+                        <h1 className="font-medium text-fg-strong">{active.label}</h1>
                     </nav>
-                    <h1 className="text-lg font-semibold tracking-tight">{active.title}</h1>
-                    <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{active.description}</p>
+                    <p className="mt-1 text-sm text-fg-subtle">{active.description}</p>
                 </div>
 
                 <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{active.render()}</main>

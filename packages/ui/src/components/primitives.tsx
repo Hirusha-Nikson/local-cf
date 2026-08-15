@@ -15,49 +15,81 @@ export function cx(...values: (string | false | null | undefined)[]): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Controls                                                                    */
+/* Controls                                                                    */
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonSize = "sm" | "base";
 
 /**
- * Cloudflare's button hierarchy: one filled orange primary per surface,
- * outlined secondary, quiet ghost. Danger reads as red text on a tint rather
- * than a filled red block — destructive but not alarming.
+ * Kumo's button hierarchy. Two things differ from the obvious implementation
+ * and are deliberate:
+ *
+ * - Every variant is outlined with `ring`, never `border`. A border participates
+ *   in layout and softens against a drop shadow; a ring keeps the edge sharp.
+ * - Colour changes on hover are immediate. Transitioning them makes a dense
+ *   dashboard feel sluggish, so there is no `transition-colors` here.
+ *
+ * Primary is the blue accent rather than the brand orange — that is what the
+ * Cloudflare dashboard uses for emphasis, with orange reserved for the mark.
  */
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary:
-    "bg-orange-500 text-white shadow-sm hover:bg-orange-600 focus-visible:outline-orange-500",
-  secondary:
-    "border border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 focus-visible:outline-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700",
-  ghost:
-    "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
-  danger:
-    "border border-red-300 bg-white text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-950/40",
+  primary: "group relative overflow-hidden bg-accent-fill text-white ring ring-accent-ring",
+  secondary: "bg-surface text-fg ring ring-line hover:bg-tint",
+  ghost: "bg-transparent text-fg-subtle ring ring-transparent hover:bg-tint hover:text-fg",
+  danger: "bg-surface text-danger ring ring-line hover:ring-danger/30",
+};
+
+const BUTTON_SIZES: Record<ButtonSize, string> = {
+  sm: "h-7 gap-1 rounded-md px-2 text-xs",
+  base: "h-9 gap-1.5 rounded-lg px-3 text-sm",
 };
 
 export function Button({
   variant = "secondary",
+  size = "base",
   className,
+  children,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}) {
   return (
     <button
       {...props}
       className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap",
-        "transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1",
+        "inline-flex items-center justify-center font-medium whitespace-nowrap",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
+        BUTTON_SIZES[size],
         BUTTON_VARIANTS[variant],
         className,
       )}
-    />
+    >
+      {/*
+        Kumo's emphasis fill: a top-to-bottom gradient that lands on the pure
+        accent, over a 1px inset highlight. Hovering flattens the gradient
+        rather than shifting hue, so the button darkens without a colour change.
+      */}
+      {variant === "primary" && (
+        <span
+          aria-hidden="true"
+          className={cx(
+            "absolute inset-0 rounded-[inherit] bg-linear-to-b from-accent-grad to-accent",
+            "shadow-[inset_0_1px_0_0_var(--color-accent-fill)] group-hover:from-accent-fill",
+          )}
+        />
+      )}
+      <span className={cx("inline-flex items-center gap-1.5", variant === "primary" && "relative")}>
+        {children}
+      </span>
+    </button>
   );
 }
 
 const FIELD_BASE =
-  "w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 " +
-  "placeholder:text-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/25 " +
-  "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500";
+  "w-full rounded-lg bg-surface px-2.5 py-1.5 text-sm text-fg ring ring-line " +
+  "placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-accent";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(FIELD_BASE, className)} />;
@@ -73,16 +105,17 @@ export function Select({
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
   return (
-    <select {...props} className={cx(FIELD_BASE, "w-auto pr-8", className)}>
+    <select {...props} className={cx(FIELD_BASE, "h-9 w-auto pr-8", className)}>
       {children}
     </select>
   );
 }
 
+/** Label sits close to its control; the gap below the group is what separates fields. */
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 flex items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
+      <span className="mb-1.5 flex items-center gap-2 text-sm font-medium text-fg">
         {label}
         {hint}
       </span>
@@ -92,7 +125,7 @@ export function Field({ label, hint, children }: { label: string; hint?: ReactNo
 }
 
 /* -------------------------------------------------------------------------- */
-/* Surfaces                                                                    */
+/* Surfaces                                                                    */
 
 export function Card({
   title,
@@ -108,18 +141,19 @@ export function Card({
   className?: string;
 }) {
   return (
+    // `ring` rather than `border`: a bordered box with a shadow reads soft-edged.
     <section
-      className={cx("overflow-hidden rounded-lg border hairline shadow-sm surface", className)}
+      className={cx("overflow-hidden rounded-lg bg-surface shadow-sm ring ring-line", className)}
     >
       {(title || actions) && (
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 hairline">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3 hairline">
+          <h2 className="text-sm font-semibold text-fg-strong">{title}</h2>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </header>
       )}
       {children}
       {footer && (
-        <footer className="border-t px-4 py-2 text-xs text-zinc-500 hairline surface-sunken">
+        <footer className="border-t px-5 py-2.5 text-sm text-fg-subtle hairline bg-recessed">
           {footer}
         </footer>
       )}
@@ -128,9 +162,7 @@ export function Card({
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return (
-    <p className="px-4 py-12 text-center text-sm text-zinc-500">{children}</p>
-  );
+  return <p className="px-5 py-12 text-center text-sm text-fg-subtle">{children}</p>;
 }
 
 export function Spinner({ className }: { className?: string }) {
@@ -152,7 +184,7 @@ export function Skeleton({ className, style }: { className?: string; style?: CSS
     <span
       aria-hidden="true"
       style={style}
-      className={cx("block rounded bg-zinc-200 motion-safe:animate-pulse dark:bg-zinc-800", className)}
+      className={cx("block rounded bg-fill motion-safe:animate-pulse", className)}
     />
   );
 }
@@ -160,7 +192,7 @@ export function Skeleton({ className, style }: { className?: string; style?: CSS
 /** Stand-in for a short list (keys, tables, migrations) while it loads. */
 export function SkeletonList({ rows = 5 }: { rows?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="space-y-2.5 p-3">
+    <div role="status" aria-label="Loading" className="space-y-2.5 p-4">
       {Array.from({ length: rows }).map((_, row) => (
         <Skeleton key={row} className="h-3.5" style={{ width: `${55 + ((row * 17) % 35)}%` }} />
       ))}
@@ -171,14 +203,17 @@ export function SkeletonList({ rows = 5 }: { rows?: number }) {
 /** Stand-in for a DataTable while its first page of rows is still loading. */
 export function SkeletonTable({ columns = 4, rows = 6 }: { columns?: number; rows?: number }) {
   return (
-    <div role="status" aria-label="Loading" className="p-3">
+    <div role="status" aria-label="Loading" className="p-4">
       <table className="w-full border-collapse text-left text-sm">
         <tbody>
           {Array.from({ length: rows }).map((_, row) => (
             <tr key={row} className="border-b last:border-0 hairline">
               {Array.from({ length: columns }).map((_, col) => (
                 <td key={col} className="px-3 py-2">
-                  <Skeleton className="h-3.5" style={{ width: col === 0 ? "70%" : `${40 + ((row * 13 + col * 7) % 40)}%` }} />
+                  <Skeleton
+                    className="h-3.5"
+                    style={{ width: col === 0 ? "70%" : `${40 + ((row * 13 + col * 7) % 40)}%` }}
+                  />
                 </td>
               ))}
             </tr>
@@ -191,12 +226,9 @@ export function SkeletonTable({ columns = 4, rows = 6 }: { columns?: number; row
 
 export function ErrorNote({ title, detail }: { title: string; detail?: string | null }) {
   return (
-    <div
-      role="alert"
-      className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm dark:border-red-900/70 dark:bg-red-950/40"
-    >
-      <p className="font-medium text-red-800 dark:text-red-300">{title}</p>
-      {detail && <p className="mt-1 break-words text-xs text-red-700/90 dark:text-red-400/90">{detail}</p>}
+    <div role="alert" className="rounded-lg bg-surface px-4 py-3 ring ring-danger/30">
+      <p className="text-sm font-medium text-danger">{title}</p>
+      {detail && <p className="mt-1 text-sm break-words text-fg-subtle">{detail}</p>}
     </div>
   );
 }
@@ -210,45 +242,39 @@ export function Callout({
   title?: ReactNode;
   children: ReactNode;
 }) {
-  const tones = {
-    info: "border-sky-300 bg-sky-50 dark:border-sky-900/70 dark:bg-sky-950/30",
-    warn: "border-amber-300 bg-amber-50 dark:border-amber-900/70 dark:bg-amber-950/30",
-    success: "border-emerald-300 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/30",
+  const rings = {
+    info: "ring-link/25",
+    warn: "ring-warning/30",
+    success: "ring-success/30",
+  } as const;
+
+  const marks = {
+    info: "text-link",
+    warn: "text-warning",
+    success: "text-success",
   } as const;
 
   return (
-    <div className={cx("rounded-lg border px-4 py-3 text-sm", tones[tone])}>
-      {title && <p className="font-semibold text-zinc-900 dark:text-zinc-100">{title}</p>}
-      <div className="mt-1 text-zinc-700 dark:text-zinc-300">{children}</div>
+    // Title and body belong together; the gap that matters is the one outside.
+    <div className={cx("rounded-lg bg-surface px-5 py-4 ring", rings[tone])}>
+      {title && <p className={cx("text-sm font-semibold", marks[tone])}>{title}</p>}
+      <div className="mt-1 text-sm text-fg-subtle">{children}</div>
     </div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Badges                                                                      */
+/* Badges                                                                      */
 
 const FIDELITY_STYLE: Record<BindingFidelity, { label: string; className: string }> = {
-  live: {
-    label: "Live",
-    className:
-      "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-400",
-  },
-  disk: {
-    label: "On disk",
-    className:
-      "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-400",
-  },
-  remote: {
-    label: "Remote",
-    className:
-      "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-900 dark:bg-sky-950/50 dark:text-sky-400",
-  },
-  unsupported: {
-    label: "Unavailable",
-    className:
-      "border-zinc-300 bg-zinc-100 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400",
-  },
+  live: { label: "Live", className: "text-success ring-success/30" },
+  disk: { label: "On disk", className: "text-warning ring-warning/30" },
+  remote: { label: "Remote", className: "text-link ring-link/25" },
+  unsupported: { label: "Unavailable", className: "text-fg-subtle ring-line" },
 };
+
+const BADGE_BASE =
+  "inline-flex items-center gap-1 rounded-md bg-surface px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ring";
 
 /**
  * The trust signal from SETUP.md §1/§3: every binding says how real it is under
@@ -257,13 +283,7 @@ const FIDELITY_STYLE: Record<BindingFidelity, { label: string; className: string
 export function FidelityBadge({ fidelity, title }: { fidelity: BindingFidelity; title?: string }) {
   const style = FIDELITY_STYLE[fidelity];
   return (
-    <span
-      title={title}
-      className={cx(
-        "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap",
-        style.className,
-      )}
-    >
+    <span title={title} className={cx(BADGE_BASE, style.className)}>
       <span className="size-1.5 rounded-full bg-current opacity-70" />
       {style.label}
     </span>
@@ -280,13 +300,7 @@ export function ModeBadge({ mode }: { mode: StudioMode }) {
   const fidelity: BindingFidelity = mode === "own" ? "live" : mode === "attach" ? "disk" : "remote";
   const style = FIDELITY_STYLE[fidelity];
   return (
-    <span
-      title={MODE_LABEL[mode].title}
-      className={cx(
-        "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap",
-        style.className,
-      )}
-    >
+    <span title={MODE_LABEL[mode].title} className={cx(BADGE_BASE, style.className)}>
       <span className="size-1.5 rounded-full bg-current opacity-70" />
       {MODE_LABEL[mode].short}
     </span>
@@ -297,8 +311,7 @@ export function Tag({ children, className }: { children: ReactNode; className?: 
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[11px] text-zinc-700",
-        "dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+        "inline-flex items-center rounded-md bg-recessed px-1.5 py-0.5 font-mono text-xs text-fg-subtle ring ring-line",
         className,
       )}
     >
@@ -308,7 +321,7 @@ export function Tag({ children, className }: { children: ReactNode; className?: 
 }
 
 /* -------------------------------------------------------------------------- */
-/* Tabs                                                                        */
+/* Tabs                                                                        */
 
 export function Tabs<T extends string>({
   tabs,
@@ -329,10 +342,11 @@ export function Tabs<T extends string>({
           aria-selected={tab.id === active}
           onClick={() => onSelect(tab.id)}
           className={cx(
-            "-mb-px border-b-2 px-0.5 py-2 text-sm transition-colors",
+            "-mb-px border-b-2 px-0.5 py-2 text-sm",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
             tab.id === active
-              ? "border-orange-500 font-medium text-zinc-900 dark:text-zinc-100"
-              : "border-transparent text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+              ? "border-accent font-medium text-fg-strong"
+              : "border-transparent text-fg-subtle hover:text-fg",
           )}
         >
           {tab.label}
@@ -343,20 +357,20 @@ export function Tabs<T extends string>({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Data display                                                                */
+/* Data display                                                                */
 
 /** Render an unknown SQL/KV value without letting `null` and `"null"` blur. */
 export function CellValue({ value }: { value: unknown }) {
   if (value === null || value === undefined) {
-    return <span className="italic text-zinc-400 dark:text-zinc-600">null</span>;
+    return <span className="text-fg-muted italic">null</span>;
   }
   if (typeof value === "object") {
-    return <span className="font-mono text-xs">{JSON.stringify(value)}</span>;
+    return <span className="font-mono text-sm">{JSON.stringify(value)}</span>;
   }
   if (typeof value === "boolean" || typeof value === "number") {
-    return <span className="font-mono text-xs text-sky-700 dark:text-sky-400">{String(value)}</span>;
+    return <span className="font-mono text-sm text-link">{String(value)}</span>;
   }
-  return <span className="font-mono text-xs">{String(value)}</span>;
+  return <span className="font-mono text-sm">{String(value)}</span>;
 }
 
 export function DataTable({
@@ -380,7 +394,8 @@ export function DataTable({
               <th
                 key={column}
                 scope="col"
-                className="border-b px-3 py-2 text-xs font-semibold whitespace-nowrap text-zinc-600 hairline surface-sunken dark:text-zinc-400"
+                // Sticky, so a border is what separates it from the rows beneath.
+                className="sticky top-0 z-10 border-b px-3 py-2 text-sm font-medium whitespace-nowrap text-fg-subtle hairline bg-recessed"
               >
                 {column}
               </th>
@@ -399,10 +414,10 @@ export function DataTable({
               <tr
                 // Row order is the only stable identity a SQL result set has.
                 key={rowIndex}
-                className="border-b last:border-0 hairline hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                className="border-b last:border-0 hairline hover:bg-tint"
               >
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="max-w-md truncate px-3 py-1.5">
+                  <td key={cellIndex} className="max-w-md truncate px-3 py-2">
                     <CellValue value={cell} />
                   </td>
                 ))}
@@ -415,54 +430,70 @@ export function DataTable({
   );
 }
 
-/** A left-hand list of bindings, used by every storage view. */
+/**
+ * A left-hand list of bindings, used by every storage view.
+ *
+ * The selected row is marked with the brand rail rather than a filled block: a
+ * solid tint reads as a floating card in a sidebar this narrow, and the rail
+ * matches how the main navigation marks its current page.
+ */
 export function BindingList<T extends { binding: string; fidelity: BindingFidelity; note?: string }>({
   bindings,
   selected,
   onSelect,
   describe,
+  label,
 }: {
   bindings: T[];
   selected: string | null;
   onSelect: (binding: string) => void;
   describe: (binding: T) => string;
+  label?: string;
 }) {
   return (
-    <nav className="flex flex-col gap-0.5 p-2">
-      {bindings.map((binding) => {
-        const isActive = binding.binding === selected;
-        return (
-          <button
-            key={binding.binding}
-            type="button"
-            onClick={() => onSelect(binding.binding)}
-            aria-current={isActive ? "true" : undefined}
-            className={cx(
-              "rounded-md border px-2.5 py-2 text-left transition-colors",
-              isActive
-                ? "border-orange-200 bg-orange-50 dark:border-orange-900/60 dark:bg-orange-500/10"
-                : "border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800",
-            )}
-          >
-            <span className="flex items-center justify-between gap-2">
+    <nav className="p-2">
+      {label && <p className="px-2 pt-1 pb-1.5 text-xs font-medium text-fg-subtle">{label}</p>}
+
+      <div className="flex flex-col gap-0.5">
+        {bindings.map((binding) => {
+          const isActive = binding.binding === selected;
+          return (
+            <button
+              key={binding.binding}
+              type="button"
+              onClick={() => onSelect(binding.binding)}
+              aria-current={isActive ? "true" : undefined}
+              className={cx(
+                "relative rounded-md py-1.5 pr-2 pl-3 text-left",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                isActive ? "bg-orange-500/10" : "hover:bg-tint",
+              )}
+            >
               <span
+                aria-hidden="true"
                 className={cx(
-                  "truncate font-mono text-sm",
-                  isActive
-                    ? "font-medium text-orange-800 dark:text-orange-400"
-                    : "text-zinc-800 dark:text-zinc-200",
+                  "absolute inset-y-1 left-0.5 w-0.5 rounded-full bg-orange-500",
+                  isActive ? "opacity-100" : "opacity-0",
                 )}
-              >
-                {binding.binding}
+              />
+              <span className="flex items-center justify-between gap-2">
+                <span
+                  className={cx(
+                    "truncate text-sm",
+                    isActive ? "font-medium text-orange-700 dark:text-orange-400" : "text-fg",
+                  )}
+                >
+                  {binding.binding}
+                </span>
+                <FidelityBadge fidelity={binding.fidelity} title={binding.note} />
               </span>
-              <FidelityBadge fidelity={binding.fidelity} title={binding.note} />
-            </span>
-            <span className="mt-0.5 block truncate text-xs text-zinc-500">
-              {describe(binding)}
-            </span>
-          </button>
-        );
-      })}
+              <span className="mt-0.5 block truncate font-mono text-sm text-fg-subtle">
+                {describe(binding)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }
@@ -471,13 +502,10 @@ export function BindingList<T extends { binding: string; fidelity: BindingFideli
 export function SplitView({ sidebar, children }: { sidebar: ReactNode; children: ReactNode }) {
   return (
     <div className="grid grid-cols-1 md:h-full md:grid-cols-[240px_minmax(0,1fr)]">
-      <aside
-        className="border-b hairline md:sticky md:top-0 md:h-full md:overflow-y-auto md:border-b-0 md:border-r"
-        style={{ background: "var(--surface-raised)" }}
-      >
+      <aside className="border-b bg-surface hairline md:sticky md:top-0 md:h-full md:overflow-y-auto md:border-r md:border-b-0">
         {sidebar}
       </aside>
-      <div className="min-w-0 space-y-4 p-4 md:p-6">{children}</div>
+      <div className="min-w-0 space-y-5 px-4 py-5 md:px-6">{children}</div>
     </div>
   );
 }

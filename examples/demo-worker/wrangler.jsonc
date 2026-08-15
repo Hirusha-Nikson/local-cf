@@ -7,63 +7,75 @@
   "compatibility_flags": ["nodejs_compat"],
 
   "vars": {
-    "GREETING": "hello from the demo worker"
+    "GREETING": "hello from the demo worker",
   },
 
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "demo-db",
+      "database_name": "local-db",
       // local-cf mirrors this id onto the sidecar so both workers open the
       // same SQLite file. Keep it stable.
       "database_id": "demo-db-local-id",
-      "migrations_dir": "migrations"
-    }
+      "migrations_dir": "migrations",
+    },
+    {
+      "binding": "AUTH",
+      "database_name": "local-auth",
+      // local-cf mirrors this id onto the sidecar so both workers open the
+      // same SQLite file. Keep it stable.
+      "database_id": "demo-db2-local-id",
+      "migrations_dir": "migrations",
+    },
   ],
 
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "demo-cache-namespace"
-    }
+      "id": "demo-cache-namespace",
+    },
   ],
 
   "r2_buckets": [
     {
       "binding": "ASSETS",
-      "bucket_name": "demo-assets"
-    }
+      "bucket_name": "demo-assets",
+    },
+    {
+      "binding": "local-images",
+      "bucket_name": "local-images",
+    },
   ],
 
   "durable_objects": {
     "bindings": [
       {
         "name": "COUNTER",
-        "class_name": "Counter"
-      }
-    ]
+        "class_name": "Counter",
+      },
+    ],
   },
 
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["Counter"]
-    }
+      "new_sqlite_classes": ["Counter"],
+    },
   ],
 
   "queues": {
     "producers": [
       {
         "binding": "JOBS",
-        "queue": "demo-jobs"
-      }
+        "queue": "demo-jobs",
+      },
     ],
     "consumers": [
       {
         "queue": "demo-jobs",
         "max_batch_size": 10,
-        "dead_letter_queue": "demo-jobs-dlq"
-      }
-    ]
-  }
+        "dead_letter_queue": "demo-jobs-dlq",
+      },
+    ],
+  },
 }

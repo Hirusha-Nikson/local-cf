@@ -5,6 +5,7 @@ export type { StudioClient } from "./api";
 export { useAsync, useAction, useInterval } from "./hooks";
 export * from "./components/primitives";
 export { ThemeToggle } from "./components/theme-toggle";
+export { Logo } from "./components/logo";
 export { ThemeProvider, useTheme } from "./theme-context";
 export { THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "./theme";
 export type { ThemePreference } from "./theme";
