@@ -4,6 +4,13 @@
   "type": "module",
   "private": true,
   "description": "Example Cloudflare Worker with D1 + KV + R2 + Durable Objects + Queues, used to exercise local-cf.",
+  "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git",
+    "directory": "examples/demo-worker"
+  },
   "scripts": {
     "demo": "node ../../packages/cli/dist/bin.js dev",
     "typecheck": "tsc -p tsconfig.json --noEmit"

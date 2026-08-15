@@ -8,13 +8,22 @@ on:
       - release
     types: [opened, synchronize, reopened, edited]
 
+permissions:
+  contents: read
+
 jobs:
   check-source-branch:
     runs-on: ubuntu-latest
     steps:
       - name: Fail if source branch is not main
+        # HEAD_REF is passed through the environment rather than interpolated
+        # into the script. Git ref names may contain `;`, `` ` ``, `$` and `"`,
+        # so `${{ github.event.pull_request.head.ref }}` inline would let a
+        # fork PR branch name execute arbitrary commands on the runner.
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          if [ "${{ github.event.pull_request.head.ref }}" != "main" ]; then
-            echo "::error::PRs into release must come from main (got '${{ github.event.pull_request.head.ref }}')."
+          if [ "$HEAD_REF" != "main" ]; then
+            echo "::error::PRs into release must come from main (got '$HEAD_REF')."
             exit 1
           fi

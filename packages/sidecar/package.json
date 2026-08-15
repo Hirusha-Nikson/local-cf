@@ -4,6 +4,13 @@
   "type": "module",
   "private": true,
   "description": "Hono worker that runs inside workerd next to the user's worker and exposes the local-cf API.",
+  "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git",
+    "directory": "packages/sidecar"
+  },
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts"

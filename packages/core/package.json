@@ -2,8 +2,19 @@
   "name": "@local-cf/core",
   "version": "0.1.0",
   "type": "module",
+  "private": true,
   "description": "Shared types, wrangler config parsing and Miniflare wiring for local-cf.",
   "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "homepage": "https://www.local-cf.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/Hirusha-Nikson/local-cf/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

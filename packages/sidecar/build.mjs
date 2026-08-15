@@ -17,5 +17,9 @@ await build({
   conditions: ["workerd", "worker", "browser", "import", "default"],
   minify: false,
   sourcemap: false,
+  // Hono and friends are MIT, which requires their copyright notice to travel
+  // with substantial portions of the code. esbuild drops comments by default,
+  // so collect the licence headers at the end of the bundle instead.
+  legalComments: "eof",
   logLevel: "info",
 });

@@ -4,6 +4,13 @@
   "type": "module",
   "private": true,
   "description": "Static-exported Next.js dashboard bundled into the local-cf npm package (fully offline).",
+  "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git",
+    "directory": "packages/dashboard"
+  },
   "scripts": {
     "dev": "next dev --port 3100",
     "build": "next build",

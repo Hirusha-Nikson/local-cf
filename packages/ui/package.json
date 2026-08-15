@@ -4,6 +4,13 @@
   "type": "module",
   "private": true,
   "description": "React components shared between the bundled offline dashboard and the hosted site.",
+  "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git",
+    "directory": "packages/ui"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./theme.css": "./src/theme.css",

@@ -1,0 +1,98 @@
+name: 🐛 Bug report
+description: Something in local-cf behaves differently than it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The `wrangler.jsonc` and the exact command are
+        the two things that make a bug reproducible — please don't skip them.
+
+        **Redact any API token or account ID before pasting.**
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected, and what you got instead.
+      placeholder: |
+        I opened the D1 tab expecting to see my `posts` table, but the list was
+        empty even though the worker reads from it fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. `npx local-cf dev` in a project with a D1 binding
+        2. Open http://localhost:8787/__local-cf
+        3. Click the D1 tab
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode?
+      options:
+        - local (default)
+        - remote (read-only attach)
+        - not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: bindings
+    attributes:
+      label: Which bindings does the project use?
+      options:
+        - label: D1
+        - label: KV
+        - label: R2
+        - label: Durable Objects
+        - label: Queues
+
+  - type: textarea
+    id: wrangler-config
+    attributes:
+      label: wrangler.jsonc / wrangler.toml
+      description: Trim it to the smallest config that still reproduces the problem.
+      render: jsonc
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal output
+      description: Any error and the surrounding lines. This is rendered as code, so no backticks needed.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: local-cf version
+      description: Output of `npx local-cf --version`.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Node version
+      placeholder: "Windows 11, Node 22.11.0"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Before submitting
+      options:
+        - label: I've removed any API token or account ID from the details above.
+          required: true
+        - label: I've checked that this isn't already reported.
+          required: true

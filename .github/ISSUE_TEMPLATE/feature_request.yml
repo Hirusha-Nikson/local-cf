@@ -1,0 +1,40 @@
+name: ✨ Feature request
+description: Suggest a capability local-cf doesn't have yet.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For open-ended ideas, [Discussions](https://github.com/Hirusha-Nikson/local-cf/discussions)
+        is often the better first stop. Use this when you have something concrete in mind.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation you hit, not the solution you have in mind — that comes next.
+      placeholder: |
+        I can browse R2 objects but there's no way to upload one, so testing an
+        upload path means writing a throwaway script every time.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do?
+      validations:
+        required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What are you doing instead today?
+      description: Workarounds are useful signal about how much this matters.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you be willing to work on this?
+      options:
+        - label: I'd be happy to open a PR for it.

@@ -2,6 +2,16 @@
   "name": "local-cf-monorepo",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "homepage": "https://www.local-cf.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Hirusha-Nikson/local-cf/issues"
+  },
   "packageManager": "pnpm@10.14.0",
   "engines": {
     "node": ">=20.11.0"

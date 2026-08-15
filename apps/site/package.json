@@ -4,6 +4,13 @@
   "type": "module",
   "private": true,
   "description": "Public site: marketing + docs + hosted dashboard, deployed to Cloudflare Workers via OpenNext.",
+  "license": "MIT",
+  "author": "H Nikson <hirushanikson@gmail.com> (https://github.com/Hirusha-Nikson)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hirusha-Nikson/local-cf.git",
+    "directory": "apps/site"
+  },
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",

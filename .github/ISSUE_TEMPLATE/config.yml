@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Question or idea
+    url: https://github.com/Hirusha-Nikson/local-cf/discussions
+    about: Ask how something works, or float a change before building it.
+  - name: 🔐 Security vulnerability
+    url: https://github.com/Hirusha-Nikson/local-cf/security/advisories/new
+    about: Report privately. Please do not open a public issue for a security problem.
+  - name: 📖 Cloudflare Workers runtime issue
+    url: https://github.com/cloudflare/workers-sdk/issues
+    about: Bugs in Miniflare, workerd or Wrangler themselves belong with Cloudflare.

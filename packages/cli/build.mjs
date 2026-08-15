@@ -4,8 +4,20 @@ import { build } from "esbuild";
 
 const SIDECAR_BUNDLE = "../sidecar/dist/sidecar.js";
 const DASHBOARD_EXPORT = "../dashboard/out";
+const ROOT_README = "../../README.md";
+const ROOT_LICENSE = "../../LICENSE";
 
 const { version } = JSON.parse(await readFile("package.json", "utf8"));
+
+/**
+ * The npm page renders this package's own README and LICENSE, but the canonical
+ * copies live at the repo root. Mirror them on every build so the two cannot
+ * drift, and so the published tarball always carries the MIT notice — npm only
+ * auto-includes a LICENSE that sits in the package directory, not the monorepo
+ * root.
+ */
+await cp(ROOT_README, "README.md");
+await cp(ROOT_LICENSE, "LICENSE");
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
@@ -28,6 +40,9 @@ await build({
   // Single source of truth for the version: package.json. src/studio.ts
   // declares this identifier rather than hardcoding a string.
   define: { __LOCAL_CF_VERSION__: JSON.stringify(version) },
+  // jsonc-parser and smol-toml are bundled in, and MIT requires their notice
+  // to ship with the code. esbuild strips comments unless told otherwise.
+  legalComments: "eof",
   // No `banner` here: esbuild preserves the hashbang already on src/bin.ts,
   // and adding another produces a syntax error on line 2.
   logLevel: "info",

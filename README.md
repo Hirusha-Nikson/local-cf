@@ -1,51 +1,164 @@
-<div align="left">
-</br>
-<a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=14&duration=3000&pause=1000&color=FF780F&background=D5640D37&center=true&vCenter=true&repeat=false&width=124&height=38&lines=npx+local-cf" alt="Typing SVG" /></a>
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/Hirusha-Nikson/local-cf/main/packages/cli/logo.png" alt="local-cf" width="112" />
+
+<h1>local-cf</h1>
+
+<a href="https://git.io/typing-svg">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=22&duration=2800&pause=900&color=FC7C1E&center=true&vCenter=true&width=520&height=42&lines=npx+local-cf;Your+data.+Your+runtime.+No+account.;One+workerd.+Two+workers.+Same+objects." alt="npx local-cf" />
+</a>
+
+<p><b>A local-first studio for Cloudflare Workers.</b><br/>
+Browse and edit the <b><i>exact</i></b> D1 databases, KV namespaces, R2 buckets, Durable Objects<br/>
+and Queues your worker is using — same runtime, offline, no Cloudflare account required.</p>
+
+<p>
+  <a href="https://www.npmjs.com/package/local-cf"><img src="https://img.shields.io/npm/v/local-cf?style=for-the-badge&color=FC7C1E&labelColor=161616&logo=npm&logoColor=FC7C1E&label=version" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/local-cf"><img src="https://img.shields.io/npm/dm/local-cf?style=for-the-badge&color=FC7C1E&labelColor=161616&logo=nodedotjs&logoColor=FC7C1E&label=downloads" alt="npm downloads" /></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-MIT-FC7C1E?style=for-the-badge&labelColor=161616" alt="MIT" /></a>
+  <a href="https://www.local-cf.com"><img src="https://img.shields.io/badge/docs-local--cf.com-FC7C1E?style=for-the-badge&labelColor=161616&logo=readthedocs&logoColor=FC7C1E" alt="Website" /></a>
+</p>
+
+<p>
+  <img src="https://img.shields.io/badge/Cloudflare_Workers-161616?style=flat-square&logo=cloudflare&logoColor=FC7C1E" alt="Workers" />
+  <img src="https://img.shields.io/badge/workerd-161616?style=flat-square&logo=cloudflare&logoColor=FC7C1E" alt="workerd" />
+  <img src="https://img.shields.io/badge/Miniflare-161616?style=flat-square&logo=cloudflare&logoColor=FC7C1E" alt="Miniflare" />
+  <img src="https://img.shields.io/badge/Hono-161616?style=flat-square&logo=hono&logoColor=FC7C1E" alt="Hono" />
+  <img src="https://img.shields.io/badge/offline_first-161616?style=flat-square&logo=airplayaudio&logoColor=FC7C1E" alt="Offline first" />
+</p>
+
+<a href="https://www.local-cf.com"><b>Website</b></a> &nbsp;·&nbsp;
+<a href="https://github.com/Hirusha-Nikson/local-cf"><b>Source</b></a> &nbsp;·&nbsp;
+<a href="https://github.com/Hirusha-Nikson/local-cf/issues"><b>Issues</b></a>
+
 </div>
 
-# local-cf
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
 
-A local-first studio for Cloudflare Workers. Browse and edit the **exact** D1
-databases, KV namespaces, R2 buckets, Durable Objects and Queues your worker
-is using — in the same runtime, offline, with no Cloudflare account required.
+## ⚡ Quick start
 
 ```bash
+# 🔒 read-only — browse everything, change nothing
 npx local-cf
+
+# ✏️ read & write — full studio, edits land on your real local data
+npx local-cf dev
 ```
 
+<table>
+<tr><th align="left">Command</th><th align="left">Access</th><th align="left">Use it when</th></tr>
+<tr>
+<td><code>npx local-cf</code></td>
+<td><b>🔒 Read-only</b></td>
+<td>You just want to look — inspect state without any risk of mutating it</td>
+</tr>
+<tr>
+<td><code>npx local-cf dev</code></td>
+<td><b>✏️ Read &amp; write</b></td>
+<td>You want the full studio — edit rows, keys, objects, send messages</td>
+</tr>
+</table>
 
-Run that from a directory with a `wrangler.toml` / `wrangler.jsonc`, then open
-the dashboard URL it prints. On its own it is a **read-only** browser over a
-copy of your dev server's data, so it cannot disturb anything. Use
-`local-cf dev` when you want to edit.
+Run either from a directory containing a `wrangler.toml` / `wrangler.jsonc`, then open
+the dashboard URL it prints. That's the whole setup.
 
-## Why
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
 
-Most local tooling shows you a *copy* of your data. `local-cf` boots **one**
-`workerd` runtime containing two workers — yours, and a small Hono sidecar —
-and gives the sidecar bindings with the *same resource identity* as yours
-(same `database_id`, `namespace_id`, `bucket_name`, same Durable Object
-class). Miniflare resolves both workers to the same underlying objects, so an
-un-checkpointed Durable Object write is visible in the dashboard immediately,
+## 🎯 Why local-cf
+
+> Most local tooling shows you a **copy** of your data. `local-cf` shows you **the data**.
+
+`local-cf` boots **one** `workerd` runtime containing two workers — yours, and a small
+Hono sidecar — and gives the sidecar bindings with the *same resource identity* as
+yours: same `database_id`, same `namespace_id`, same `bucket_name`, same Durable
+Object class.
+
+Miniflare resolves both workers to the same underlying objects, so an
+**un-checkpointed Durable Object write is visible in the dashboard immediately** —
 not after the next flush.
 
-## Commands
+<details>
+<summary><b>🧩 How that fits together (diagram)</b></summary>
 
-| Command | What it does |
-| --- | --- |
-| `local-cf` / `local-cf attach` | Browse a point-in-time copy of a running dev server's data, **read-only** (Mode B) |
-| `local-cf dev` | Run your worker and the studio in one runtime, **read/write** (Mode A) |
-| `local-cf remote` | Browse real Cloudflare resources via the API (Mode C) |
+<br/>
 
-The default is deliberately the safe one. `attach` never executes your worker,
-so it never has to bundle it — which makes it the command most likely to just
-work — and it opens a copy rather than your real `.wrangler/state`, so nothing
-it does can affect the dev server you are attached to.
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#FC7C1E','primaryTextColor':'#161616','primaryBorderColor':'#FC7C1E','lineColor':'#FC7C1E','secondaryColor':'#2b2b2b','tertiaryColor':'#161616','fontFamily':'Fira Code, monospace'}}}%%
+flowchart LR
+    subgraph RT["single workerd runtime"]
+        direction TB
+        W["your worker"]
+        S["local-cf sidecar<br/>(Hono)"]
+    end
 
-Common options (`dev` / `attach` / `remote`):
+    W --> B{{"same binding identity<br/>database_id · namespace_id<br/>bucket_name · DO class"}}
+    S --> B
+    B --> O[("D1 · KV · R2<br/>Durable Objects · Queues")]
+    S --> D["📊 dashboard"]
+```
+
+</details>
+
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
+
+## 🚀 Modes
+
+Every mode below runs read-only by default; `dev` is what unlocks writing.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### `dev` — Mode A
+**`local-cf dev`**
+
+Runs your worker **and** the studio in one runtime.
+
+✅ Live Durable Object state<br/>
+✅ Full binding parity<br/>
+✅ Strongest guarantee<br/>
+✏️ Read & write — plain `local-cf` is the read-only view
+
+</td>
+<td width="33%" valign="top">
+
+### `attach` — Mode B
+**`local-cf attach`**
+
+Attaches to a dev server you don't control, over its persist directory.
+
+⚠️ Disk state only<br/>
+⚠️ No live DO or Queue state<br/>
+ℹ️ Bindings labelled in the UI
+
+</td>
+<td width="33%" valign="top">
+
+### `remote` — Mode C
+**`local-cf remote`**
+
+Browses **real** Cloudflare resources through the API.
+
+🔑 `--account-id` / `--api-token`<br/>
+🔑 or `CLOUDFLARE_ACCOUNT_ID`<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`CLOUDFLARE_API_TOKEN`
+
+</td>
+</tr>
+</table>
+
+> **On Mode B:** it is a genuinely weaker guarantee than Mode A — no live Durable
+> Object or Queue state, just what's on disk. The dashboard labels bindings
+> accordingly rather than implying parity.
+
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
+
+## ⚙️ Options
+
+Common to `dev` / `attach` / `remote`:
 
 | Option | Description |
-| --- | --- |
+| :--- | :--- |
 | `-p, --port <port>` | Port to listen on |
 | `--host <host>` | Host to bind to |
 | `-e, --env <environment>` | Wrangler environment to use |
@@ -54,68 +167,76 @@ Common options (`dev` / `attach` / `remote`):
 | `--no-watch` | Do not rebuild the worker on file changes |
 | `-q, --quiet` | Suppress worker logs in the terminal |
 | `--open` | Open the dashboard in your browser |
-| `--allow-write` | Attach to the real persist directory read/write — only when the other dev server is stopped |
-| `--no-backup` | Skip the copy taken before `--allow-write` opens your state |
 
-`remote` also takes `--account-id` / `--api-token` (or the
-`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` env vars).
+`remote` additionally takes `--account-id` / `--api-token`, or reads
+`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` from the environment.
 
-Mode B is a genuinely weaker guarantee than Mode A, and the dashboard labels
-bindings accordingly rather than implying parity. It shows a **point-in-time
-copy** taken when local-cf started — restart it to refresh — with no live
-Durable Object or Queue state.
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
 
-That copy is not caution for its own sake. Starting any runtime against a
-persist directory writes SQLite `-wal`/`-shm` files beside your data before a
-single request is served, and those files belong to the `workerd` build that
-made them. A different build — the one your own `wrangler dev` ships — can fail
-to reconcile them. Attaching to a copy is what makes Mode B unable to affect
-the dev server it is attached to.
+## 📦 What works today
 
-## Bundling
+<details open>
+<summary><b>Bindings</b></summary>
 
-`local-cf dev` has to turn your worker into something `workerd` can run. It
-prefers **your project's own `wrangler`**, via `wrangler deploy --dry-run`,
-which neither deploys nor authenticates. That matters because wrangler's
-bundler knows which Node built-ins `workerd` implements natively and which need
-an `unenv` polyfill — reproducing that matrix independently is a losing game,
-and getting it wrong is what makes a worker fail with `No such module
-"node:os"`.
+<br/>
 
-If the project has no `wrangler` installed, local-cf falls back to a built-in
-esbuild pass. That covers most workers but not the full Node-compat surface;
-the startup banner always says which one ran. Force the fallback with
-`LOCAL_CF_BUNDLER=esbuild`.
+| | Binding | Capabilities |
+| :---: | :--- | :--- |
+| 🗄️ | **D1** | Table browser with paging · SQL editor · CSV export · migration list & apply, tracked in `d1_migrations` |
+| 🔑 | **KV** | Key list with prefix filter · value editor (UTF-8 and base64) · TTL · JSON import/export |
+| 🪣 | **R2** | Object listing · upload · download · delete |
+| 🧬 | **Durable Objects** | name→id resolution · live request inspection |
+| 📨 | **Queues** | Send single messages · consumer & DLQ config view |
 
-## What works today
+</details>
 
-- **D1** — table browser with paging, SQL editor, CSV export, migration
-  list/apply tracked in `d1_migrations`
-- **KV** — key list with prefix filter, value editor (UTF-8 and base64), TTL,
-  JSON import/export
-- **R2** — object listing, upload, download, delete
-- **Durable Objects** — name→id resolution and live request inspection
-- **Queues** — send single messages, consumer/DLQ config view
-- **Logs** — polled tail of worker `console.*` output
-- **Snapshots** — copy and restore the whole persist directory
-- **Audit log** — every dashboard write recorded, with undo where an inverse exists
+<details open>
+<summary><b>Tooling</b></summary>
 
-Detected but not yet browsable (shown in the UI as such): Vectorize, Workers
-AI, Hyperdrive, Analytics Engine.
+<br/>
 
-## Known limitations
+| | Feature | Capabilities |
+| :---: | :--- | :--- |
+| 📜 | **Logs** | Polled tail of worker `console.*` output |
+| 💾 | **Snapshots** | Copy and restore the whole persist directory |
+| 🧾 | **Audit log** | Every dashboard write recorded, with undo where an inverse exists |
 
-- Workers importing `.wasm` modules are not bundled yet.
-- Durable Object *storage* cannot be read directly — the runtime exposes no
-  API for it. The DO view talks to instances instead; give your class a
-  `/debug` route and it becomes browsable.
+
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
+
+## 🚧 Known limitations
+
+- Workers importing `.wasm` modules are **not bundled yet**.
+- Durable Object *storage* cannot be read directly — the runtime exposes no API for
+  it. The DO view talks to instances instead; give your class a `/debug` route and
+  it becomes browsable.
 - Queue depth and DLQ contents are not observable from another worker.
 
-## Links
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
 
-- Source & full docs: <https://github.com/Hirusha-Nikson/local-cf>
-- Issues: <https://github.com/Hirusha-Nikson/local-cf/issues>
+## 🔗 Links
+
+| | |
+| :--- | :--- |
+| 🌐 Website | [www.local-cf.com](https://www.local-cf.com) |
+| 📖 Source & full docs | [github.com/Hirusha-Nikson/local-cf](https://github.com/Hirusha-Nikson/local-cf) |
+| 🐛 Issues | [Report a bug](https://github.com/Hirusha-Nikson/local-cf/issues) |
+| 📦 npm | [npmjs.com/package/local-cf](https://www.npmjs.com/package/local-cf) |
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).
+
+## Trademarks
+
+`local-cf` is an independent project and is **not affiliated with, endorsed by, or
+sponsored by Cloudflare, Inc.** Cloudflare, Workers, D1, R2, KV, Durable Objects,
+Queues and Wrangler are trademarks of Cloudflare, Inc., referenced here only to
+describe compatibility.
+
+<div align="center">
+<br/>
+<sub>Built for people who'd rather not deploy to see their data.</sub>
+<br/><br/>
+<a href="https://www.local-cf.com"><img src="https://img.shields.io/badge/npx_local--cf-FC7C1E?style=for-the-badge&labelColor=161616&logo=cloudflare&logoColor=FC7C1E" alt="npx local-cf" /></a>
+</div>

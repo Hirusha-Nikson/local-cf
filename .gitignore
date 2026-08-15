@@ -13,3 +13,9 @@ out/
 coverage/
 .DS_Store
 Thumbs.db
+
+# Local agent/editor config. Kept out of the repo so third-party skill content
+# isn't redistributed under this project's licence.
+.claude/
+__pycache__/
+*.py[cod]
