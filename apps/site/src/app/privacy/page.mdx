@@ -1,0 +1,149 @@
+export const metadata = {
+  title: "Privacy",
+  description:
+    "What local-cf.com collects, what the local-cf CLI does not collect, and how to have a published review removed.",
+  alternates: { canonical: "/privacy" },
+};
+
+{/*
+  * Written from what the code actually does, not from a template. If you change
+  * any of the following, this page goes stale and should be updated with it:
+  *
+  *   - the Google Form fields          src/lib/testimonial-display.ts
+  *   - the KV cache or its retention   src/lib/testimonials.ts
+  *   - `observability` on the Worker   wrangler.jsonc
+  *   - the avatar hosts               `avatarUrlFor`
+  *
+  * ANALYTICS: there are none today, and this page deliberately makes no claim
+  * either way — a "we don't track you" line would quietly become untrue the
+  * day one is added. Adding any analytics DOES require a section here saying
+  * what it collects and how long it is kept, and a cookie/consent banner if
+  * the tool sets cookies or is not configured to anonymise. Cookieless,
+  * IP-anonymising options (Cloudflare Web Analytics, Plausible, Umami) avoid
+  * the banner; Google Analytics does not.
+  *
+  * Not reviewed by a lawyer. If local-cf ever gains accounts, payments or a
+  * hosted service, this needs revisiting properly rather than extending.
+*/}
+
+# Privacy
+
+**Last updated: 16 August 2026**
+
+This page covers **www.local-cf.com**, the website. The `local-cf` command-line
+tool is covered separately below, because it behaves very differently.
+
+## The CLI collects nothing
+
+`local-cf` runs entirely on your machine. It does not phone home, report usage,
+check for updates, or send your data anywhere. There is no telemetry to opt out
+of, because none was written.
+
+Your D1 rows, KV values, R2 objects and Durable Object state never leave your
+computer. The one exception is `local-cf remote`, which talks directly to the
+Cloudflare REST API using a token you supply — that traffic goes to Cloudflare,
+not to us, and the token stays in your local Node process.
+
+Installing the package downloads it from npm, and npm logs downloads the way it
+does for every package. That is between you and npm; we see aggregate download
+counts and nothing else.
+
+## The website
+
+### Hosting
+
+The site runs on Cloudflare Workers. Cloudflare processes requests on our
+behalf and records request logs, which can include your IP address, the page
+you requested, your user agent and a timestamp. This is standard server logging
+used to keep the site running and diagnose faults. Cloudflare's handling of
+that data is governed by their own privacy policy.
+
+### Avatars are loaded from third parties
+
+Published reviews may show a profile picture. Those images are fetched by your
+browser directly from **github.com** or **gravatar.com**, which means those
+services can see your IP address when a page containing a review loads. We send
+no referrer with those requests, and we set no cookies for them, but the
+connection itself is unavoidable if the image is to appear.
+
+## Reviews
+
+This is the only place the site collects personal information, so it is worth
+setting out in full.
+
+### What is collected
+
+Reviews are submitted through a **Google Form**. The form asks for:
+
+| Field | Published? |
+| --- | --- |
+| Your name | Yes, on the homepage and `/reviews` |
+| Your role or company | Yes, if you provide one |
+| Your review | Yes, in full and unedited |
+| Your GitHub username | Yes, as a link to your profile, if you provide one |
+| Your email address | **No** — see below |
+
+Submitting the form is entirely voluntary. Nothing on this site requires it.
+
+### What happens to your email address
+
+An email address is only used to look up a Gravatar profile picture, and it is
+converted to a one-way hash before it ever reaches anything published. The raw
+address stays on the private responses sheet and is never sent to the website.
+
+The code that reads reviews actively rejects anything in the avatar field that
+looks like an email address, and logs an error if it ever sees one, precisely so
+that a mistake in the spreadsheet cannot leak an address onto the page.
+
+### Publication is a manual step
+
+A submitted review is not published automatically. Each one is read and has to
+be explicitly approved before it appears anywhere. Reviews that are not approved
+stay on the private responses sheet and are never shown.
+
+### Where it is stored
+
+- **Google Forms and Google Sheets** hold submissions, including unapproved
+  ones. Google processes this data under their own privacy policy.
+- **Cloudflare KV** holds a cached copy of the *approved, already-public*
+  reviews so the site keeps working when Google is unavailable. This cache is
+  refreshed roughly every 15 minutes and holds nothing that is not already
+  published on the page.
+
+### How long it is kept
+
+Approved reviews stay published until you ask for them to be removed, or until
+we remove them. The Cloudflare cache is overwritten on each refresh, so removing
+a review from the source removes it from the site within about 15 minutes.
+
+Unapproved submissions remain on the private responses sheet unless you ask for
+them to be deleted.
+
+## Removing your review
+
+Email **hirushanikson@gmail.com** and ask. You do not need to explain why, and
+you do not need to have submitted through the same address.
+
+You can also ask what has been stored about you, ask for a correction, or ask
+for an unapproved submission to be deleted. There is no form and no process —
+it is one person reading email, and requests are handled as soon as they are
+seen.
+
+If you would rather not email, open an issue on
+[GitHub](https://github.com/Hirusha-Nikson/local-cf/issues) — though note that
+issues are public, so do not include anything there you would not want read.
+
+## Children
+
+This site is documentation for a developer tool and is not directed at
+children. No information is knowingly collected from anyone under 13.
+
+## Changes
+
+If this page changes materially, the date at the top changes with it. The full
+history is in the [repository](https://github.com/Hirusha-Nikson/local-cf), so
+you can see exactly what changed and when.
+
+## Contact
+
+**hirushanikson@gmail.com** — for anything on this page, or anything else.

@@ -50,6 +50,29 @@ export default async function ReviewsPage() {
             <Plus className="h-4 w-4" /> Add your review
           </Link>
         </Reveal>
+
+        {/*
+          * Sits with the button, not in the footer.
+          *
+          * This is the one place on the site that asks for personal
+          * information, and the moment someone decides to give it is the
+          * moment they should know what becomes public. A link buried in the
+          * footer is not that moment.
+        */}
+        <p className="mt-3 max-w-xl text-xs leading-relaxed text-fg-muted">
+          Your name, review and — if you give them — your role and GitHub
+          username are published on this page and the homepage. Your email
+          address is not: it is only hashed to find a profile picture. Nothing
+          appears until it has been read and approved, and you can ask for it to
+          be removed at any time. See the{" "}
+          <Link
+            href="/privacy"
+            className="text-link underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            privacy notice
+          </Link>
+          .
+        </p>
       </Reveal>
 
       {testimonials.length === 0 ? (

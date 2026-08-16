@@ -2,40 +2,100 @@ export const metadata = { title: "Introduction" };
 
 # local-cf
 
-A local-first studio for Cloudflare Workers. It shows you the D1 databases, KV
-namespaces, R2 buckets, Durable Objects and Queues your worker is actually
-using — and lets you edit them — without deploying anything or opening the
-Cloudflare dashboard.
+local-cf is a database browser for Cloudflare Workers that runs on your own
+machine. Point it at a project and it reads your `wrangler.toml` or
+`wrangler.jsonc`, works out which D1 databases, KV namespaces, R2 buckets,
+Durable Objects and Queues that worker uses, and gives you a UI for looking at
+them and changing them.
 
-## What makes it different
-
-Most local tooling shows you a *copy* of your data: a separate process reads
-the same SQLite file and hopes it stays in sync. local-cf does something
-narrower and stronger. In its default mode it boots **one** `workerd` runtime
-containing two workers:
-
-- your worker, built from your `wrangler.toml` / `wrangler.jsonc`
-- a small Hono sidecar that serves the studio API and the dashboard
-
-Because the sidecar declares bindings with the *same resource identity* as your
-worker — same `database_id`, same `namespace_id`, same `bucket_name`, same
-Durable Object class — Miniflare hands both workers the same underlying objects.
-
-The practical consequence: an un-flushed Durable Object write is visible in the
-dashboard immediately, not after the next checkpoint.
-
-## What it will not pretend to do
-
-There is no runtime API for reading another Durable Object's storage, so the
-Durable Objects view addresses and probes instances rather than claiming to
-browse their state. Attach mode shares files, not memory, and says so on every
-binding. See [Modes](/docs/modes).
-
-## Install
+Nothing is uploaded. No Cloudflare account is required. It is one command:
 
 ```bash
 npx local-cf
 ```
 
-Run it in the directory containing your `wrangler.toml` or `wrangler.jsonc`.
-Nothing is uploaded, and no Cloudflare account is required.
+## The problem it solves
+
+When you run `wrangler dev`, your worker writes real data — rows, keys,
+objects — into a directory called `.wrangler/state` in your project. That data
+is genuinely there, but there is no supported way to look at it. If you want to
+know what is in your D1 table right now, your options are to `console.log` it,
+write a temporary `/debug` route, or deploy and open the Cloudflare dashboard.
+
+local-cf gives you the third option locally: a real UI over the data your
+worker just wrote.
+
+## The one idea worth understanding
+
+Most tools that inspect local Workers data open the SQLite files themselves,
+from a separate process, and hope nothing changes underneath them. That is a
+*copy* of your data, one flush behind.
+
+local-cf can do something stronger. When it runs your worker itself, it starts a
+**single `workerd` runtime containing two workers**:
+
+- your worker, built from your wrangler config
+- a small [Hono](https://hono.dev) sidecar that serves the API and the dashboard
+
+The sidecar declares its bindings using the *same identifiers* as your worker —
+same `database_id`, same `namespace_id`, same `bucket_name`, same Durable Object
+class name. Miniflare sees two workers asking for the same resource and hands
+them the same underlying object, rather than two independent ones.
+
+The practical payoff: a Durable Object write that has not been checkpointed to
+disk yet is still visible in the dashboard, because the dashboard is reading the
+same live object your worker just wrote to.
+
+## Two commands, and the difference between them
+
+This is the thing to get right before anything else.
+
+| Command | What it does | Access |
+| --- | --- | --- |
+| `npx local-cf` | Attaches to a dev server you are already running, by reading a copy of its state | **Read-only** |
+| `npx local-cf dev` | Runs your worker *and* the studio together in one runtime | **Read/write** |
+
+`npx local-cf` is the default because it is the safe one. It never runs your
+worker, never needs to bundle it, and cannot modify your project's local data —
+so the first thing a new user types cannot break anything. It is also the one
+that works alongside `wrangler dev`, `next dev`, or whatever pipeline you
+already have running.
+
+`local-cf dev` is the full studio. It replaces your dev server rather than
+sitting beside it, and it is the only mode where Durable Objects and Queues
+work.
+
+There is a third mode, `local-cf remote`, which browses the real resources in
+your Cloudflare account over the REST API. All three are covered in
+[Modes](/docs/modes).
+
+## What it deliberately does not claim
+
+Two honest limits, both surfaced in the UI rather than buried here:
+
+**Durable Object storage cannot be read from outside.** The Workers runtime
+exposes no API for one worker to read another Durable Object's storage. So the
+Durable Objects view does what is actually possible — resolves names to
+instance IDs and sends requests to instances — instead of pretending to browse
+their contents. If your class exposes a `/debug` route, that view becomes a real
+browser for it.
+
+**Attach mode reads a snapshot, not live memory.** When you run bare
+`npx local-cf`, it copies your dev server's persist directory and opens the
+copy. That is a point-in-time view: data written after local-cf started will not
+appear until you restart it. Every affected binding is labelled **"on disk"**
+rather than **"live"** in the dashboard, so you always know which guarantee you
+are looking at.
+
+## Where to go next
+
+- **[Getting started](/docs/getting-started)** — install, first run, and a tour
+  of what you are looking at
+- **[Modes](/docs/modes)** — the full comparison of `local-cf`, `local-cf dev`
+  and `local-cf remote`
+- **[Features](/docs/features)** — what each tab in the studio actually does
+- **[CLI reference](/docs/cli)** — every command, flag and environment variable
+- **[Architecture](/docs/architecture)** — how the two-worker trick and the Node
+  bridge are built
+- **[Troubleshooting](/docs/troubleshooting)** — the errors you are most likely
+  to hit, and what they mean

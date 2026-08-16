@@ -1,0 +1,192 @@
+export const metadata = { title: "CLI reference" };
+
+# CLI reference
+
+```
+local-cf [command] [options]
+```
+
+Run it from a directory containing a `wrangler.jsonc`, `wrangler.json` or
+`wrangler.toml`. local-cf searches that directory and then walks up through
+parents until it finds one, or use `--config` to point at a specific file.
+
+Requires **Node.js 20.11 or newer**.
+
+## Commands
+
+### `local-cf attach` (default)
+
+```bash
+npx local-cf
+npx local-cf attach
+```
+
+Browse the persisted state of a dev server you do not control.
+[Mode B](/docs/modes#mode-b--attached-local-cf-attach-the-default). **Read-only** unless you pass `--allow-write`.
+
+This is the default command — running `local-cf` with no command runs `attach`.
+It never runs your worker, so it never needs to bundle it, which makes it the
+command most likely to just work on any project.
+
+It opens a copy of your persist directory (in `.local-cf/attached/`), not the
+original. See [Modes](/docs/modes#it-reads-a-copy-not-the-original) for why that
+matters.
+
+### `local-cf dev`
+
+```bash
+npx local-cf dev
+```
+
+Run your worker and the studio in one runtime, read/write.
+[Mode A](/docs/modes#mode-a--shared-runtime-local-cf-dev). This is the full studio and the only mode where
+Durable Objects and Queues work.
+
+Requires a `main` entrypoint in your wrangler config — without one there is no
+worker to run, and local-cf will tell you to use `attach` instead.
+
+### `local-cf remote`
+
+```bash
+npx local-cf remote
+```
+
+Browse the real resources in your Cloudflare account over the REST API.
+[Mode C](/docs/modes#mode-c--remote-local-cf-remote). Requires credentials; see
+[`--account-id`](#remote-only-options) below.
+
+Covers D1, KV and R2. Durable Objects and Queues have no REST API equivalent.
+
+## Common options
+
+These apply to `dev`, `attach` and `remote` alike.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `-p, --port <port>` | `8787` | Port to listen on |
+| `--host <host>` | `127.0.0.1` | Host to bind to |
+| `-e, --env <environment>` | — | Wrangler environment to use, e.g. `[env.staging]` |
+| `-c, --config <path>` | auto-discovered | Path to `wrangler.toml` / `wrangler.jsonc` |
+| `--persist-to <path>` | `.wrangler/state` | Override the persist directory |
+| `--no-watch` | watching on | Do not rebuild the worker on file changes (`dev` only) |
+| `-q, --quiet` | off | Suppress worker logs in the terminal. They still appear in the Logs tab |
+| `--open` | off | Open the dashboard in your browser on startup |
+| `--no-backup` | backup on | Do not copy the persist directory before opening it read/write |
+| `--allow-write` | off | Allow writes in attach mode — only when the other dev server is stopped |
+| `-V, --version` | — | Print the version |
+| `-h, --help` | — | Print help for a command |
+
+### Notes on the less obvious ones
+
+**`--env`** merges a named environment over the top level the way wrangler does:
+bindings are *replaced* wholesale by the environment, not deep-merged. If the
+named environment does not exist in your config, local-cf fails rather than
+silently using the top level.
+
+**`--persist-to`** is the escape hatch when local-cf's `workerd` is newer than
+your project's. Pointing it somewhere else keeps local-cf's state entirely
+separate from your project's, at the cost of no longer sharing data with your
+dev server. See [runtime version mismatch](/docs/troubleshooting#local-cfs-workerd-is-newer-than-my-projects).
+
+**`--no-watch`** only affects `dev`, since attach and remote never build your
+worker. Watching is scoped to the directory containing your entrypoint, not the
+project root — rooting it higher makes every D1 write under `.wrangler/state`
+look like a source change and the worker rebuilds in a loop.
+
+**`--allow-write`** does two things at once: it accepts writes, *and* it makes
+attach open your real `.wrangler/state` instead of a copy. Only pass it when the
+other dev server is actually stopped.
+
+**`--no-backup`** disables the pre-flight copy taken before any read/write open.
+There is no good reason to use it except a persist directory too large to copy
+comfortably — and above 2 GB local-cf skips the backup on its own anyway.
+
+### Remote-only options
+
+| Option | Environment variable | Description |
+| --- | --- | --- |
+| `--account-id <id>` | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
+| `--api-token <token>` | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |
+
+The token needs **D1 Edit**, **Workers KV Storage Edit** and **Workers R2
+Storage Edit** permissions. Flags take precedence over environment variables.
+The token stays in the Node process and is never sent to the browser.
+
+## Environment variables
+
+| Variable | Used by | Effect |
+| --- | --- | --- |
+| `CLOUDFLARE_ACCOUNT_ID` | `remote` | Account ID, if not passed as a flag |
+| `CLOUDFLARE_API_TOKEN` | `remote` | API token, if not passed as a flag |
+| `LOCAL_CF_BUNDLER` | `dev` | Set to `esbuild` to skip your project's wrangler and always use the built-in bundler |
+| `LOCAL_CF_UI_DIR` | all | Path to a built dashboard export, overriding the bundled one. Mainly for developing the dashboard against a live sidecar |
+
+## Examples
+
+```bash
+# Look at what your running dev server has written — safest first run
+npx local-cf --port 8788
+
+# Full studio, opens the browser for you
+npx local-cf dev --open
+
+# Full studio against your staging environment on a custom port
+npx local-cf dev --env staging --port 8080
+
+# Point at a project in another directory
+npx local-cf --config ../api/wrangler.toml
+
+# Edit the state your (stopped) dev server left behind
+npx local-cf --allow-write
+
+# Keep local-cf's state entirely separate from your project's
+npx local-cf dev --persist-to .local-cf/state
+
+# Quiet mode — worker logs go to the studio, not your terminal
+npx local-cf dev --quiet
+
+# Your real Cloudflare account
+npx local-cf remote --account-id abc123 --api-token xyz789
+```
+
+## URLs it serves
+
+| Path | What |
+| --- | --- |
+| `/__local-cf/ui/` | The dashboard |
+| `/__local-cf/api/…` | The studio API |
+| everything else | Forwarded to your worker (`dev` mode only) |
+
+In attach and remote mode there is no worker to forward to, so anything outside
+`/__local-cf` returns a `404` with a JSON body explaining which mode you are in
+and where the studio lives.
+
+## Files it writes
+
+All inside your project, all safe to delete, all worth putting in `.gitignore`:
+
+| Path | What | Retention |
+| --- | --- | --- |
+| `.local-cf/attached/{0,1,2}/` | Point-in-time copies opened by attach mode | 2 kept, rotating |
+| `.local-cf/backups/<timestamp>/` | Pre-flight backups taken before a read/write open | 3 kept |
+| `.local-cf/snapshots/<name>/` | Snapshots you took from the studio | Kept until you delete them |
+| `.local-cf/audit.jsonl` | One JSON line per dashboard write | Append-only |
+
+```gitignore
+.local-cf/
+```
+
+## Shutdown behaviour
+
+local-cf handles `SIGINT`, `SIGTERM`, `SIGBREAK` (Ctrl+Break on Windows) and
+`SIGHUP` (your terminal closing). All four run the same clean shutdown, which
+matters more than it sounds: killing the process outright leaves the persist
+directory's SQLite files open mid-write.
+
+Shutdown disposes the runtime — which checkpoints the write-ahead log — and then
+sweeps the `-shm` files it created, so the next process to open those databases
+(your own `wrangler dev`, possibly on a different `workerd`) builds its own. The
+`-wal` files are deliberately left alone: those are committed data.
+
+If dispose hangs, it is abandoned after 5 seconds rather than leaving the
+process alive holding your files open.

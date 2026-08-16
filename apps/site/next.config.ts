@@ -1,6 +1,7 @@
 import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 import rehypeSlug from "rehype-slug";
+import remarkGfm from "remark-gfm";
 
 /**
  * The public site: marketing, docs and a hosted copy of the dashboard.
@@ -19,6 +20,13 @@ const nextConfig: NextConfig = {
 
 const withMDX = createMDX({
   options: {
+    /*
+     * MDX implements CommonMark, and tables are a GFM extension — without this
+     * every `| --- |` block in the docs renders as a paragraph of literal pipe
+     * characters, which is what it did until this was added. It also brings
+     * strikethrough, task lists and footnotes along with it.
+     */
+    remarkPlugins: [remarkGfm],
     /*
      * Gives every heading a stable `id`, which buys three things at once:
      * deep links into the docs, anchor buttons rendered by the heading

@@ -16,9 +16,44 @@
   {
     "path": "/docs/architecture",
     "page": "Architecture",
+    "heading": "Which bundler builds your worker",
+    "id": "which-bundler-builds-your-worker",
+    "text": "local-cf dev has to turn your entrypoint into one ESM module for Miniflare. It tries two things, in order. First, your project's own wrangler. local-cf resolves wrangler from your project root and runs wrangler deploy --dry-run --outdir <tmp, which invokes wrangler's real bundler and writes the result to disk without d"
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "Which workerd runs your data",
+    "id": "which-workerd-runs-your-data",
+    "text": "The same reasoning, applied to the runtime instead of the bundler. The persist directory under .wrangler/state is SQLite written by workerd, and workerd migrates those files in place as it gains versions. Open a project's state with a workerd newer than the one its own wrangler ships, and that wrangler can stop being a"
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "Copy-first state handling",
+    "id": "copy-first-state-handling",
+    "text": "Three separate copies exist, for three different reasons: Attach snapshots (.local-cf/attached/{0,1,2}). Attach mode never opens your real persist directory, because simply starting a runtime against it creates -wal/-shm files that a different workerd build may not reconcile. The directory names are single characters o"
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "The read-only guard",
+    "id": "the-read-only-guard",
+    "text": "Attach mode refuses writes because two workerd processes writing one set of SQLite files is not a supported configuration and has corrupted real projects. It is enforced at the edge, as Hono middleware, rather than route by route: any method outside GET/HEAD/OPTIONS is refused with a 403 and an explanation. One route i"
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
+    "heading": "Fidelity as data, not decoration",
+    "id": "fidelity-as-data-not-decoration",
+    "text": "Every binding carries a fidelity field — live, disk, remote or unsupported — computed from the mode when the metadata is assembled, and rendered verbatim by the dashboard. This is the mechanism behind the project's central claim. It is what makes \"attach mode is weaker than dev mode\" a visible property of each binding "
+  },
+  {
+    "path": "/docs/architecture",
+    "page": "Architecture",
     "heading": "Typed end to end",
     "id": "typed-end-to-end",
-    "text": "The sidecar is a Hono app; the dashboard consumes it with hc<ApiType: Query strings and JSON bodies are validated on the routes, which is what puts them into the client's signature — a typo is a build error, not a runtime surprise."
+    "text": "The sidecar is a Hono app; the dashboard consumes it with hc<ApiType: Query strings and JSON bodies are validated on the routes, which is what puts them into the client's signature — a typo is a build error, not a runtime surprise. A route without a validator cannot be called with a body through the typed client at all"
   },
   {
     "path": "/docs/architecture",
@@ -28,80 +63,493 @@
     "text": "The dashboard is a single page whose tabs are component state, not routes. That has one deliberate consequence: the same React tree builds twice — static-exported into the npm package for offline use, and compiled into this site's /app route by OpenNext — with no adapter layer between them. The only environment-specifi"
   },
   {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Commands",
+    "id": "commands",
+    "text": ""
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "local-cf attach (default)",
+    "id": "local-cf-attach-default",
+    "text": "Browse the persisted state of a dev server you do not control. Mode B. Read-only unless you pass --allow-write. This is the default command — running local-cf with no command runs attach. It never runs your worker, so it never needs to bundle it, which makes it the command most likely to just work on any project. It op"
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "local-cf dev",
+    "id": "local-cf-dev",
+    "text": "Run your worker and the studio in one runtime, read/write. Mode A. This is the full studio and the only mode where Durable Objects and Queues work. Requires a main entrypoint in your wrangler config — without one there is no worker to run, and local-cf will tell you to use attach instead."
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "local-cf remote",
+    "id": "local-cf-remote",
+    "text": "Browse the real resources in your Cloudflare account over the REST API. Mode C. Requires credentials; see --account-id below. Covers D1, KV and R2. Durable Objects and Queues have no REST API equivalent."
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Common options",
+    "id": "common-options",
+    "text": "These apply to dev, attach and remote alike. | Option | Default | Description | | --- | --- | --- | | -p, --port <port | 8787 | Port to listen on | | --host <host | 127.0.0.1 | Host to bind to | | -e, --env <environment | — | Wrangler environment to use, e.g. [env.staging] | | -c, --config <path | auto-discovered | Pat"
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Notes on the less obvious ones",
+    "id": "notes-on-the-less-obvious-ones",
+    "text": "--env merges a named environment over the top level the way wrangler does: bindings are replaced wholesale by the environment, not deep-merged. If the named environment does not exist in your config, local-cf fails rather than silently using the top level. --persist-to is the escape hatch when local-cf's workerd is new"
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Remote-only options",
+    "id": "remote-only-options",
+    "text": "| Option | Environment variable | Description | | --- | --- | --- | | --account-id <id | CLOUDFLAREACCOUNTID | Cloudflare account ID | | --api-token <token | CLOUDFLAREAPITOKEN | Cloudflare API token | The token needs D1 Edit, Workers KV Storage Edit and Workers R2 Storage Edit permissions. Flags take precedence over e"
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Environment variables",
+    "id": "environment-variables",
+    "text": "| Variable | Used by | Effect | | --- | --- | --- | | CLOUDFLAREACCOUNTID | remote | Account ID, if not passed as a flag | | CLOUDFLAREAPITOKEN | remote | API token, if not passed as a flag | | LOCALCFBUNDLER | dev | Set to esbuild to skip your project's wrangler and always use the built-in bundler | | LOCALCFUIDIR | a"
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Examples",
+    "id": "examples",
+    "text": ""
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "URLs it serves",
+    "id": "urls-it-serves",
+    "text": "| Path | What | | --- | --- | | /local-cf/ui/ | The dashboard | | /local-cf/api/… | The studio API | | everything else | Forwarded to your worker (dev mode only) | In attach and remote mode there is no worker to forward to, so anything outside /local-cf returns a 404 with a JSON body explaining which mode you are in an"
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Files it writes",
+    "id": "files-it-writes",
+    "text": "All inside your project, all safe to delete, all worth putting in .gitignore: | Path | What | Retention | | --- | --- | --- | | .local-cf/attached/{0,1,2}/ | Point-in-time copies opened by attach mode | 2 kept, rotating | | .local-cf/backups/<timestamp/ | Pre-flight backups taken before a read/write open | 3 kept | | ."
+  },
+  {
+    "path": "/docs/cli",
+    "page": "/docs/cli",
+    "heading": "Shutdown behaviour",
+    "id": "shutdown-behaviour",
+    "text": "local-cf handles SIGINT, SIGTERM, SIGBREAK (Ctrl+Break on Windows) and SIGHUP (your terminal closing). All four run the same clean shutdown, which matters more than it sounds: killing the process outright leaves the persist directory's SQLite files open mid-write. Shutdown disposes the runtime — which checkpoints the w"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Overview",
+    "id": "overview",
+    "text": "All modes. The landing tab. It lists every binding local-cf found in your wrangler config, grouped by type, each with the identifier it resolved to (databaseid, namespaceid, bucketname, class name) and its fidelity label — live, on disk, remote, or unsupported. Start here whenever something looks wrong. If a binding yo"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "D1",
+    "id": "d1",
+    "text": "All modes. Read-only in attach unless --allow-write. Table browser. Tables and views are read out of sqlitemaster, with internal sqlite and cf tables filtered out. Pick one and you get a paged view of its rows (50 at a time by default, up to 500) along with the total row count and full column metadata — type, nullabili"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "KV",
+    "id": "kv",
+    "text": "All modes. Read-only in attach unless --allow-write. Key listing with prefix filtering and cursor paging (100 keys per page by default, up to 1000). Value editing in two encodings. Text values are edited as UTF-8; binary values are handled as base64, so you can store and retrieve non-text data without corrupting it. Me"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "R2",
+    "id": "r2",
+    "text": "All modes. Read-only in attach unless --allow-write. Object listing with prefix and delimiter support, so you can browse a bucket as if it had folders. Cursor-paged, 100 objects per page by default, up to 1000. Download. Object bodies stream straight through the sidecar without being buffered, so large files do not blo"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Durable Objects",
+    "id": "durable-objects",
+    "text": "local-cf dev only. This is the tab where local-cf is most explicit about what is and is not possible, so it is worth explaining properly. The runtime exposes no API for reading another Durable Object's storage. Not a missing feature in local-cf — there is genuinely no way for one worker to enumerate what is inside anot"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Queues",
+    "id": "queues",
+    "text": "local-cf dev only. Send a single message to any queue producer binding, with an optional delaySeconds. In dev mode your consumer is running in the same runtime, so the message is actually delivered and you can watch it get processed in the Logs tab. Send a batch of messages in one call. Consumer configuration is shown "
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Logs",
+    "id": "logs",
+    "text": "local-cf dev and attach. A tail of your worker's console. output, plus local-cf's own studio messages (runtime version, bundler choice, reload notifications, snapshot progress). Logs are polled, not streamed. Miniflare captures the worker's output in the Node process, which the sidecar cannot reach directly — it asks t"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Snapshots & audit",
+    "id": "snapshots--audit",
+    "text": "local-cf dev and attach."
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Snapshots",
+    "id": "snapshots",
+    "text": "A snapshot is a copy of your entire persist directory, so it captures D1, KV, R2 and Durable Object storage together as one consistent set. They live in .local-cf/snapshots/<name/. Names you provide are sanitised to [A-Za-z0-9.-]; leave the name blank and you get a timestamp. Restoring stops the runtime, replaces the p"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Audit log",
+    "id": "audit-log",
+    "text": "Every write the dashboard makes is appended to .local-cf/audit.jsonl as one JSON object per line: sequence number, timestamp, mode, action, binding, and a short detail string. Actions recorded: d1.query (mutating statements only), d1.exec, d1.migrate, kv.put, kv.delete, kv.import, r2.put, r2.delete, queue.send, queue.s"
+  },
+  {
+    "path": "/docs/features",
+    "page": "/docs/features",
+    "heading": "Not implemented yet",
+    "id": "not-implemented-yet",
+    "text": "local-cf detects these bindings in your config and shows them on the Overview tab, but cannot browse them: | Binding | Status | | --- | --- | | Vectorize | Detected; browsing not implemented | | Hyperdrive | Detected; inspection not implemented | | Analytics Engine | Detected; querying not implemented | | Workers AI | "
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "Before you start",
+    "id": "before-you-start",
+    "text": "You need: Node.js 20.11 or newer. Check with node --version. A Cloudflare Workers project with a wrangler.jsonc, wrangler.json or wrangler.toml in it. local-cf reads that file to discover your bindings — it is the only configuration it needs. You do not need a Cloudflare account, an API token, or an internet connection"
+  },
+  {
     "path": "/docs/getting-started",
     "page": "Getting started",
     "heading": "1. Run it",
     "id": "1-run-it",
-    "text": "From the directory containing your wrangler config: You will get one port serving two things: | URL | What it is | | --- | --- | | http://127.0.0.1:8787/ | your worker | | http://127.0.0.1:8787/local-cf/ui/ | the studio | Requests outside /local-cf are forwarded to your worker over a service binding, which is why a sin"
+    "text": "Open a terminal in the directory containing your wrangler config and run: local-cf searches for a config file in that directory and then walks up through parent directories, the same way wrangler does. If it finds one, it prints a startup banner and a URL. Open the URL under studio in your browser. That's the setup."
   },
   {
     "path": "/docs/getting-started",
     "page": "Getting started",
-    "heading": "2. Options",
-    "id": "2-options",
-    "text": ""
+    "heading": "What the banner is telling you",
+    "id": "what-the-banner-is-telling-you",
+    "text": "Each line is worth knowing: | Line | Meaning | | --- | --- | | mode | Which of the three modes you are in | | access | Whether the studio will accept writes. read-only is the default for bare local-cf | | worker | The name from your wrangler config | | bundler | Only in dev mode. Whether your worker was built by your p"
   },
   {
     "path": "/docs/getting-started",
     "page": "Getting started",
-    "heading": "3. D1 migrations",
-    "id": "3-d1-migrations",
-    "text": "Put .sql files in the directory named by migrationsdir (default migrations/). The Migrations tab lists them, marks which have been applied, and applies pending ones one at a time. Applied migrations are tracked in a d1migrations table, the same convention Wrangler uses, so the two do not fight. Multi-statement files wo"
+    "heading": "2. Read-only, and how to leave it",
+    "id": "2-read-only-and-how-to-leave-it",
+    "text": "Bare npx local-cf opens the studio read-only. Every button that would change data is refused, and the API answers writes with a 403 explaining why. This is not a limitation to work around casually — it exists because two workerd processes writing the same SQLite files at once can corrupt them. There are two correct way"
   },
   {
     "path": "/docs/getting-started",
     "page": "Getting started",
-    "heading": "4. Snapshots",
-    "id": "4-snapshots",
-    "text": "Before a risky change, take a snapshot from the Snapshots & audit tab. A snapshot is a copy of the whole persist directory (.wrangler/state/v3), so it captures D1, KV, R2 and Durable Object storage together. Restoring stops the runtime, swaps the directory, and starts it again — in-memory Durable Object state does not "
+    "heading": "3. Two things on one port",
+    "id": "3-two-things-on-one-port",
+    "text": "In dev mode, one port serves both your app and the studio: | URL | What it is | | --- | --- | | http://127.0.0.1:8787/ | your worker | | http://127.0.0.1:8787/local-cf/ui/ | the studio | Anything outside /local-cf is forwarded to your worker over an internal service binding, which is why a single port is enough and why"
   },
   {
     "path": "/docs/getting-started",
     "page": "Getting started",
-    "heading": "5. Remote mode",
-    "id": "5-remote-mode",
-    "text": "To browse the real resources in your Cloudflare account instead: The token needs D1 Edit, Workers KV Storage Edit and Workers R2 Storage Edit. It stays in the Node process and is never sent to the browser."
+    "heading": "4. A tour of the studio",
+    "id": "4-a-tour-of-the-studio",
+    "text": "The studio is a single page with tabs down the left. Briefly: Overview — every binding local-cf found, each labelled with its fidelity: live (same object as your worker), on disk (a copy), remote (your real Cloudflare account), or unsupported in this mode. Start here to confirm it found what you expected. D1 — browse t"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "5. Applying D1 migrations",
+    "id": "5-applying-d1-migrations",
+    "text": "Put .sql files in the directory named by migrationsdir in your D1 binding (default migrations/). The Migrations panel in the D1 tab lists them, marks which have already been applied, and applies pending ones one at a time. Applied migrations are tracked in a d1migrations table — the same convention Wrangler uses, so th"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "6. Taking a snapshot before something risky",
+    "id": "6-taking-a-snapshot-before-something-risky",
+    "text": "Before a migration you are unsure about, or a bulk delete, open Snapshots & audit and take a snapshot. A snapshot copies the entire persist directory, so it captures D1, KV, R2 and Durable Object storage together as one consistent set. Restoring stops the runtime, swaps the directory back, and starts it again. Any in-m"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "7. Browsing your real Cloudflare account",
+    "id": "7-browsing-your-real-cloudflare-account",
+    "text": "To point the studio at production data instead of local data: Or pass them as flags: The token needs D1 Edit, Workers KV Storage Edit and Workers R2 Storage Edit. It stays in the Node process and is never sent to the browser, so it cannot end up in devtools or localStorage. Remote mode covers D1, KV and R2. Durable Obj"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "Recommended: ignore local-cf's directory",
+    "id": "recommended-ignore-local-cfs-directory",
+    "text": "local-cf keeps its own state in .local-cf/ in your project — snapshots, backups, the audit log. Add it to your .gitignore:"
+  },
+  {
+    "path": "/docs/getting-started",
+    "page": "Getting started",
+    "heading": "Next",
+    "id": "next",
+    "text": "Modes — the full comparison, and when each is the right choice CLI reference — every flag Troubleshooting — if the first run didn't go well"
   },
   {
     "path": "/docs/modes",
     "page": "Modes A / B / C",
-    "heading": "Mode A — shared runtime (local-cf)",
-    "id": "mode-a--shared-runtime-local-cf",
-    "text": "We own the dev process. One Miniflare instance hosts your worker and the sidecar together, with the sidecar's bindings pointing at the same resource identities. D1, KV, R2: the same objects, not a copy Durable Objects: live, including in-memory state that has not been checkpointed Queues: live producers; your consumer "
+    "heading": "Which one do I want?",
+    "id": "which-one-do-i-want",
+    "text": "| If you… | Use | Access | | --- | --- | --- | | Just want to look at your data, and already have a dev server running | npx local-cf | Read-only | | Want to edit data, and are happy for local-cf to run your worker | npx local-cf dev | Read/write | | Stopped your dev server and want to edit what it left behind | npx lo"
   },
   {
     "path": "/docs/modes",
     "page": "Modes A / B / C",
-    "heading": "Mode B — attached (local-cf attach)",
-    "id": "mode-b--attached-local-cf-attach",
-    "text": "Your own pipeline already runs Miniflare — OpenNext, Nuxt, a custom harness. We cannot inject into that process, so local-cf starts a separate Miniflare instance pointed at the same .wrangler/state/v3 directory. D1, KV, R2: shared through files. Correct, but a write is only visible once the other process flushes it Dur"
+    "heading": "Mode A — shared runtime (local-cf dev)",
+    "id": "mode-a--shared-runtime-local-cf-dev",
+    "text": "local-cf owns the dev process. One Miniflare instance hosts your worker and the sidecar together, and the sidecar's bindings point at the same resource identities as your worker's. | Binding | Guarantee | | --- | --- | | D1, KV, R2 | The same objects, not a copy | | Durable Objects | Live, including in-memory state tha"
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "Mode B — attached (local-cf attach, the default)",
+    "id": "mode-b--attached-local-cf-attach-the-default",
+    "text": "You already run Miniflare yourself — wrangler dev, OpenNext, Nuxt, a custom harness. local-cf cannot inject itself into that process, so it starts its own Miniflare instance pointed at your project's persisted state. attach is registered as the default command, so bare npx local-cf and npx local-cf attach are the same "
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "It reads a copy, not the original",
+    "id": "it-reads-a-copy-not-the-original",
+    "text": "This is the part that most often surprises people, so it is worth being exact. local-cf does not open your .wrangler/state directly. On startup it copies that directory to .local-cf/attached/<slot and opens the copy. The reason is not about writes. Simply starting a runtime against a persist directory creates SQLite -w"
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "What works",
+    "id": "what-works",
+    "text": "| Binding | Guarantee | | --- | --- | | D1, KV, R2 | Correct as of when local-cf started. Restart to refresh | | Durable Objects | Not available. There is no class in our runtime for a binding to point at | | Queues | Not available. In-flight messages are not shared across processes |"
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "Read-only, and --allow-write",
+    "id": "read-only-and---allow-write",
+    "text": "Attach mode is read-only by default. The API refuses every mutating request with a 403 that explains itself: local-cf is read-only in attach mode. Another dev server owns this persist directory. Two runtimes writing the same SQLite files can corrupt them, so writes are refused here. One deliberate exception: SELECT sta"
   },
   {
     "path": "/docs/modes",
     "page": "Modes A / B / C",
     "heading": "Mode C — remote (local-cf remote)",
     "id": "mode-c--remote-local-cf-remote",
-    "text": "No local runtime at all. The sidecar's routes proxy to the Cloudflare REST API with a stored API token. D1, KV, R2: your real account Durable Objects, Queues: no REST API equivalent, so not browsable Route shapes are identical to local mode, so the dashboard code path barely branches — only the data source underneath c"
+    "text": "No local runtime at all. The sidecar's routes proxy to the Cloudflare REST API using an API token you supply. or, with the standard environment variables: | Binding | Guarantee | | --- | --- | | D1, KV, R2 | Your real account, over the network | | Durable Objects | Not browsable — no REST API for reading another DO's s"
+  },
+  {
+    "path": "/docs/modes",
+    "page": "Modes A / B / C",
+    "heading": "How fidelity is labelled",
+    "id": "how-fidelity-is-labelled",
+    "text": "Every binding carries a fidelity value that the dashboard renders directly: | Label | Meaning | | --- | --- | | live | The same live object your worker uses, in-memory state included | | on disk | The same bytes, from a copy. May lag behind the running process | | remote | Served over the network from your real Cloudfl"
   },
   {
     "path": "/docs",
     "page": "Introduction",
-    "heading": "What makes it different",
-    "id": "what-makes-it-different",
-    "text": "Most local tooling shows you a copy of your data: a separate process reads the same SQLite file and hopes it stays in sync. local-cf does something narrower and stronger. In its default mode it boots one workerd runtime containing two workers: your worker, built from your wrangler.toml / wrangler.jsonc a small Hono sid"
+    "heading": "The problem it solves",
+    "id": "the-problem-it-solves",
+    "text": "When you run wrangler dev, your worker writes real data — rows, keys, objects — into a directory called .wrangler/state in your project. That data is genuinely there, but there is no supported way to look at it. If you want to know what is in your D1 table right now, your options are to console.log it, write a temporar"
   },
   {
     "path": "/docs",
     "page": "Introduction",
-    "heading": "What it will not pretend to do",
-    "id": "what-it-will-not-pretend-to-do",
-    "text": "There is no runtime API for reading another Durable Object's storage, so the Durable Objects view addresses and probes instances rather than claiming to browse their state. Attach mode shares files, not memory, and says so on every binding. See Modes."
+    "heading": "The one idea worth understanding",
+    "id": "the-one-idea-worth-understanding",
+    "text": "Most tools that inspect local Workers data open the SQLite files themselves, from a separate process, and hope nothing changes underneath them. That is a copy of your data, one flush behind. local-cf can do something stronger. When it runs your worker itself, it starts a single workerd runtime containing two workers: y"
   },
   {
     "path": "/docs",
     "page": "Introduction",
-    "heading": "Install",
-    "id": "install",
-    "text": "Run it in the directory containing your wrangler.toml or wrangler.jsonc. Nothing is uploaded, and no Cloudflare account is required."
+    "heading": "Two commands, and the difference between them",
+    "id": "two-commands-and-the-difference-between-them",
+    "text": "This is the thing to get right before anything else. | Command | What it does | Access | | --- | --- | --- | | npx local-cf | Attaches to a dev server you are already running, by reading a copy of its state | Read-only | | npx local-cf dev | Runs your worker and the studio together in one runtime | Read/write | npx loc"
+  },
+  {
+    "path": "/docs",
+    "page": "Introduction",
+    "heading": "What it deliberately does not claim",
+    "id": "what-it-deliberately-does-not-claim",
+    "text": "Two honest limits, both surfaced in the UI rather than buried here: Durable Object storage cannot be read from outside. The Workers runtime exposes no API for one worker to read another Durable Object's storage. So the Durable Objects view does what is actually possible — resolves names to instance IDs and sends reques"
+  },
+  {
+    "path": "/docs",
+    "page": "Introduction",
+    "heading": "Where to go next",
+    "id": "where-to-go-next",
+    "text": "Getting started — install, first run, and a tour of what you are looking at Modes — the full comparison of local-cf, local-cf dev and local-cf remote Features — what each tab in the studio actually does CLI reference — every command, flag and environment variable Architecture — how the two-worker trick and the Node bri"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Startup",
+    "id": "startup",
+    "text": ""
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "\"No wrangler.toml / wrangler.json(c) found\"",
+    "id": "no-wranglertoml--wranglerjsonc-found",
+    "text": "local-cf searches the current directory and then every parent directory for wrangler.jsonc, wrangler.json or wrangler.toml, in that order — the same search wrangler does. Run it from your project directory, or point at the config explicitly:"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "\"Your wrangler config has no main entrypoint\"",
+    "id": "your-wrangler-config-has-no-main-entrypoint",
+    "text": "local-cf dev has to run your worker, and your config does not say where it is. Either add main to your config, or use attach mode, which never runs your worker:"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "No such module \"node:os\" / Could not resolve \"...\"",
+    "id": "no-such-module-nodeos--could-not-resolve-",
+    "text": "Your worker needs part of wrangler's bundler that local-cf's built-in esbuild pass does not reimplement — usually a Node built-in that workerd does not provide natively and that wrangler polyfills with unenv. local-cf normally avoids this by bundling through your project's own wrangler. This error means it fell back to"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "\"Workers runtime failed to start\" / std::terminate() called with no exception",
+    "id": "workers-runtime-failed-to-start--stdterminate-called-with-no-exception",
+    "text": "workerd aborts like this when a SQLite file in the persist directory cannot be read. It usually means a previous run left the files in a state this workerd build cannot reconcile. In order of preference: 1. Restore from .local-cf/backups/ — local-cf keeps the three most recent copies taken before any read/write open 2."
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "\"Could not prepare a snapshot of the persist directory: every slot is locked\"",
+    "id": "could-not-prepare-a-snapshot-of-the-persist-directory-every-slot-is-locked",
+    "text": "Attach mode rotates through three copy slots under .local-cf/attached/. All three being locked means orphaned local-cf processes are still holding file handles — almost always on Windows, where an open handle makes a directory undeletable outright rather than merely stale. Close any other local-cf processes and try aga"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Worker imports a .wasm module",
+    "id": "worker-imports-a-wasm-module",
+    "text": "Not supported yet. The built-in esbuild pass builds in memory, and emitting a separate wasm module needs an output path. If your project has wrangler installed, local-cf will try wrangler's bundler first — but a build that emits more than one module is rejected too, since side-modules would have to be wired into Minifl"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Version mismatches",
+    "id": "version-mismatches",
+    "text": ""
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "local-cf's workerd is newer than my project's",
+    "id": "local-cfs-workerd-is-newer-than-my-projects",
+    "text": "You will see this in the banner and the logs: local-cf's runtime (workerd 1.20260730.1) is newer than your project's (workerd 1.20250109.0). Writing .wrangler/state with it can migrate those SQLite files in place and stop your own wrangler dev from starting. This is a real risk, not a formality. workerd migrates persis"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Writes are refused",
+    "id": "writes-are-refused",
+    "text": ""
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "\"local-cf is read-only in attach mode\"",
+    "id": "local-cf-is-read-only-in-attach-mode",
+    "text": "Working as intended. Bare npx local-cf runs attach mode, which is read-only because another dev server owns the persist directory, and two runtimes writing the same SQLite files can corrupt them. If you want to edit data, use the full studio: If your dev server is genuinely stopped and you want to edit what it left beh"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "My SELECT works but my UPDATE doesn't",
+    "id": "my-select-works-but-my-update-doesnt",
+    "text": "Also intended. The read-only guard exempts the SQL query route so that browsing keeps working, then checks each statement individually. Anything matching INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, REPLACE, TRUNCATE or PRAGMA is refused. Same two fixes as above."
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Data looks wrong",
+    "id": "data-looks-wrong",
+    "text": ""
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "My data is stale / new writes don't appear",
+    "id": "my-data-is-stale--new-writes-dont-appear",
+    "text": "You are in attach mode, which reads a point-in-time copy taken when local-cf started. Data your dev server writes afterwards will not appear. Restart local-cf to take a fresh copy, or use local-cf dev for a live view. Bindings showing \"on disk\" rather than \"live\" in the dashboard are the ones affected."
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "The dashboard shows a different database than my worker",
+    "id": "the-dashboard-shows-a-different-database-than-my-worker",
+    "text": "Almost always a missing databaseid. Check the Overview tab for this warning: D1 binding \"DB\" has no databaseid; falling back to \"my-database\". Local storage identity is derived from this value… Local storage identity comes from databaseid. Without one, local-cf falls back to databasename and then to the binding name — "
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "A binding is missing from Overview",
+    "id": "a-binding-is-missing-from-overview",
+    "text": "local-cf parses your config directly rather than through wrangler internals, and skips entries it cannot make sense of — each with a warning shown on the Overview tab. The usual causes: | Binding | Requires | | --- | --- | | d1databases | binding | | kvnamespaces | binding | | r2buckets | binding | | durableobjects.bin"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Durable Objects say \"unavailable\"",
+    "id": "durable-objects-say-unavailable",
+    "text": "Expected outside local-cf dev. In attach mode there is no user worker in local-cf's runtime, so there is no class for a DO binding to point at. In remote mode there is no REST API for reading another Durable Object's storage. Run npx local-cf dev for live Durable Object access. Even in dev mode, you cannot browse a DO'"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Queue depth / dead letter contents are empty",
+    "id": "queue-depth--dead-letter-contents-are-empty",
+    "text": "Neither is observable from another worker in any mode. local-cf can send messages to producers and show your consumer's configuration, and in dev mode your consumer really runs — watch the Logs tab to see messages processed. But inspecting the queue itself is not possible."
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Ports and URLs",
+    "id": "ports-and-urls",
+    "text": ""
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "http://127.0.0.1:8787/ returns a 404",
+    "id": "http1270018787-returns-a-404",
+    "text": "You are not in dev mode. Only local-cf dev runs your worker; attach and remote serve the studio alone. The 404 body says which mode you are in. The studio is always at /local-cf/ui/."
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Port already in use",
+    "id": "port-already-in-use",
+    "text": "Your dev server probably has 8787. In attach mode local-cf must run on a different port, since it is not replacing your dev server:"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "How local-cf protects your data",
+    "id": "how-local-cf-protects-your-data",
+    "text": "Worth knowing before you need it. Everything lives in .local-cf/ inside your project: | Path | What | When it's written | | --- | --- | --- | | .local-cf/attached/{0,1,2}/ | Point-in-time copies attach mode reads | Every attach run, rotating | | .local-cf/backups/<timestamp/ | Pre-flight backup, 3 kept | Before any rea"
+  },
+  {
+    "path": "/docs/troubleshooting",
+    "page": "/docs/troubleshooting",
+    "heading": "Still stuck?",
+    "id": "still-stuck",
+    "text": "Check the Logs tab first — studio messages there often explain what the banner only hinted at. Then open an issue with your local-cf --version, the startup banner, your platform, and the relevant part of your wrangler config."
   }
 ]

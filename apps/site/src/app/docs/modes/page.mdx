@@ -2,51 +2,176 @@ export const metadata = { title: "Modes" };
 
 # Modes A, B and C
 
-local-cf can reach your bindings three different ways. They are not equivalent,
-and the dashboard labels every binding with which one is in play.
+local-cf can reach your bindings three different ways. They are **not**
+equivalent, and it matters that you know which one you are in — so the CLI
+prints it on startup and the dashboard labels every individual binding with the
+guarantee that applies to it.
 
-## Mode A — shared runtime (`local-cf`)
+## Which one do I want?
 
-We own the dev process. One Miniflare instance hosts your worker and the sidecar
-together, with the sidecar's bindings pointing at the same resource identities.
+| If you… | Use | Access |
+| --- | --- | --- |
+| Just want to look at your data, and already have a dev server running | `npx local-cf` | Read-only |
+| Want to edit data, and are happy for local-cf to run your worker | `npx local-cf dev` | Read/write |
+| Stopped your dev server and want to edit what it left behind | `npx local-cf --allow-write` | Read/write |
+| Want to look at your **real** Cloudflare account | `npx local-cf remote` | Read/write |
 
-- D1, KV, R2: **the same objects**, not a copy
-- Durable Objects: live, including in-memory state that has not been checkpointed
-- Queues: live producers; your consumer runs in the same runtime
+If you are not sure, run `npx local-cf`. It cannot damage anything.
 
-This is the mode worth using if you can.
+---
 
-## Mode B — attached (`local-cf attach`)
+## Mode A — shared runtime (`local-cf dev`)
 
-Your own pipeline already runs Miniflare — OpenNext, Nuxt, a custom harness. We
-cannot inject into that process, so local-cf starts a **separate** Miniflare
-instance pointed at the same `.wrangler/state/v3` directory.
+local-cf owns the dev process. One Miniflare instance hosts your worker and the
+sidecar together, and the sidecar's bindings point at the same resource
+identities as your worker's.
 
-- D1, KV, R2: shared through files. Correct, but a write is only visible once the
-  other process flushes it
-- Durable Objects: **not available**. There is no class in our runtime for a
-  binding to point at
-- Queues: in-flight messages are not shared across processes
+```bash
+npx local-cf dev
+```
 
-This is a materially weaker guarantee than Mode A. The dashboard says
-"on disk" rather than "live" on every affected binding instead of implying
-parity.
+| Binding | Guarantee |
+| --- | --- |
+| D1, KV, R2 | **The same objects**, not a copy |
+| Durable Objects | Live, including in-memory state that has not been checkpointed |
+| Queues | Live producers; your consumer runs in the same runtime |
+
+This is the mode worth using if you can. It is the only one where Durable
+Objects and Queues work at all, and the only one where the dashboard reflects a
+write the instant your worker makes it.
+
+**What it costs you:** local-cf has to build your worker, so it replaces your
+own dev server rather than running beside it. It prefers your project's own
+`wrangler` to do that build (see [Architecture](/docs/architecture#which-bundler-builds-your-worker)),
+which makes it work for most projects — but a worker importing `.wasm` modules,
+or one with an unusual build step, may not bundle. If that happens, fall back to
+Mode B; you still get D1, KV and R2.
+
+**File watching:** in `dev` mode local-cf watches the directory containing your
+entrypoint and rebuilds on change, hot-swapping the worker without dropping your
+local state. Disable it with `--no-watch`.
+
+---
+
+## Mode B — attached (`local-cf attach`, the default)
+
+You already run Miniflare yourself — `wrangler dev`, OpenNext, Nuxt, a custom
+harness. local-cf cannot inject itself into that process, so it starts its own
+Miniflare instance pointed at your project's persisted state.
 
 ```bash
 # in the same project directory as the dev server you already have running
-local-cf attach --port 8788
+npx local-cf --port 8788
 ```
 
-Use a different port from your dev server. In attach mode local-cf serves only
-the studio — your app stays where it was.
+`attach` is registered as the **default command**, so bare `npx local-cf` and
+`npx local-cf attach` are the same thing.
+
+### It reads a copy, not the original
+
+This is the part that most often surprises people, so it is worth being exact.
+
+local-cf does **not** open your `.wrangler/state` directly. On startup it copies
+that directory to `.local-cf/attached/<slot>` and opens the copy.
+
+The reason is not about writes. Simply *starting* a runtime against a persist
+directory creates SQLite `-wal` and `-shm` files beside your data before a
+single request is served — and those files belong to the exact `workerd` build
+that made them. If local-cf's `workerd` differs from your project's, your own
+`wrangler dev` can fail to reconcile them and stop starting at all. Reading a
+copy makes that impossible by construction.
+
+The consequence you will actually feel:
+
+> **Attach mode is a point-in-time view.** Data your dev server writes *after*
+> local-cf started will not appear. Restart local-cf to pick it up.
+
+The dashboard says **"on disk"** on every affected binding, with that
+explanation attached, rather than implying parity.
+
+### What works
+
+| Binding | Guarantee |
+| --- | --- |
+| D1, KV, R2 | Correct as of when local-cf started. Restart to refresh |
+| Durable Objects | **Not available.** There is no class in our runtime for a binding to point at |
+| Queues | **Not available.** In-flight messages are not shared across processes |
+
+### Read-only, and `--allow-write`
+
+Attach mode is read-only by default. The API refuses every mutating request with
+a `403` that explains itself:
+
+> local-cf is read-only in attach mode. Another dev server owns this persist
+> directory. Two runtimes writing the same SQLite files can corrupt them, so
+> writes are refused here.
+
+One deliberate exception: `SELECT` statements in the SQL editor still run. The
+read-only guard lets the query route through and then checks each statement
+individually, because a studio that cannot run a `SELECT` has stopped being a
+browser.
+
+If your dev server is stopped and you want to edit the data it left behind:
+
+```bash
+npx local-cf --allow-write
+```
+
+`--allow-write` changes the behaviour in two ways: writes are accepted, and
+local-cf opens your **real** `.wrangler/state` rather than a copy — because
+editing a throwaway copy would be pointless. Before it does, it takes a
+timestamped backup into `.local-cf/backups/`, keeping the three most recent.
+
+---
 
 ## Mode C — remote (`local-cf remote`)
 
 No local runtime at all. The sidecar's routes proxy to the Cloudflare REST API
-with a stored API token.
+using an API token you supply.
 
-- D1, KV, R2: your real account
-- Durable Objects, Queues: no REST API equivalent, so not browsable
+```bash
+npx local-cf remote --account-id <id> --api-token <token>
+```
+
+or, with the standard environment variables:
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=...
+export CLOUDFLARE_API_TOKEN=...
+npx local-cf remote
+```
+
+| Binding | Guarantee |
+| --- | --- |
+| D1, KV, R2 | Your real account, over the network |
+| Durable Objects | Not browsable — no REST API for reading another DO's storage |
+| Queues | Not browsable — no REST API equivalent |
+
+The token needs **D1 Edit**, **Workers KV Storage Edit** and **Workers R2
+Storage Edit**. It is passed to the sidecar as a plain var inside the runtime
+and never reaches the browser, so it cannot leak through devtools or
+`localStorage`.
 
 Route shapes are identical to local mode, so the dashboard code path barely
 branches — only the data source underneath changes.
+
+> Remote mode talks to production. There is no read-only guard here: a delete in
+> the studio is a delete in your account.
+
+---
+
+## How fidelity is labelled
+
+Every binding carries a fidelity value that the dashboard renders directly:
+
+| Label | Meaning |
+| --- | --- |
+| **live** | The same live object your worker uses, in-memory state included |
+| **on disk** | The same bytes, from a copy. May lag behind the running process |
+| **remote** | Served over the network from your real Cloudflare account |
+| **unsupported** | Detected in your config, but not browsable in this mode |
+
+An `unsupported` binding always carries a reason explaining what would make it
+work — usually "run `local-cf dev`". Config `vars` are never degraded, because
+they are read straight out of your config file and are equally accurate in every
+mode.

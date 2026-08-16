@@ -14,10 +14,18 @@ export const DOC_SECTIONS = [
     ],
   },
   {
-    title: "Reference",
+    title: "Guides",
     pages: [
       { href: "/docs/modes", label: "Modes A / B / C" },
+      { href: "/docs/features", label: "Features" },
+    ],
+  },
+  {
+    title: "Reference",
+    pages: [
+      { href: "/docs/cli", label: "CLI reference" },
       { href: "/docs/architecture", label: "Architecture" },
+      { href: "/docs/troubleshooting", label: "Troubleshooting" },
     ],
   },
 ];
