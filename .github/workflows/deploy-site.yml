@@ -27,6 +27,13 @@ jobs:
       # runs is pinned to a commit SHA rather than a movable version tag.
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history, not the default depth-1 clone. src/app/sitemap.ts
+          # dates each URL from `git log -1` on the page file: with a shallow
+          # clone that command returns nothing for any page not touched by the
+          # head commit, so <lastmod> would vanish for most of the site and
+          # read as "changed today" for the rest.
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0

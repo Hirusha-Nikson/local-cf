@@ -1,24 +1,36 @@
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@local-cf/ui";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { SiteNav } from "../components/site-nav";
 import "./globals.css";
 import { Geist } from "next/font/google";
+import { SITE_URL } from "@/lib/site";
 import { REVIEW_FORM_URL } from "@/lib/testimonial-display";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
+/*
+ * Written for the results page, not for us.
+ *
+ * "local-first studio" is how we describe local-cf; it is not what anyone types
+ * into a search box. The words people actually use for this problem are the
+ * product names (D1, KV, R2) and the tools they already run (wrangler,
+ * Miniflare), so those lead here. Kept under ~155 characters, which is roughly
+ * where Google starts truncating.
+ */
 const DESCRIPTION =
-  "Browse and edit the exact D1, KV, R2, Durable Objects and Queues your worker is using — in the same runtime, offline, with no Cloudflare account.";
+  "View and edit your local D1 tables, KV keys and R2 objects while wrangler dev runs. A local dashboard for Cloudflare Workers — offline, no account needed.";
 
 export const metadata: Metadata = {
   // Required for the relative OG and canonical URLs below to resolve.
-  metadataBase: new URL("https://www.local-cf.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "local-cf — a local-first studio for Cloudflare Workers",
+    // Brand last: nobody is searching for "local-cf" yet, they are searching
+    // for the problem. ~60 characters, before Google truncates.
+    default: "Local D1, KV & R2 browser for Cloudflare Workers — local-cf",
     template: "%s · local-cf",
   },
   description: DESCRIPTION,
@@ -35,19 +47,44 @@ export const metadata: Metadata = {
     "local development",
   ],
   alternates: { canonical: "/" },
+  /*
+   * Social cards are not search results, so they get different copy.
+   * Nothing is ranked here — a human decides in one second whether to click —
+   * so these match the hero and the OG image rather than the keyword-led
+   * `title` above. Both fall back to the shared opengraph-image.tsx.
+   */
   openGraph: {
     type: "website",
     siteName: "local-cf",
     url: "/",
-    title: "local-cf — a local-first studio for Cloudflare Workers",
+    title: "See inside your Cloudflare Worker's storage, without leaving localhost",
     description: DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "local-cf — a local-first studio for Cloudflare Workers",
+    title: "See inside your Cloudflare Worker's storage, without leaving localhost",
     description: DESCRIPTION,
   },
   robots: { index: true, follow: true },
+};
+
+/**
+ * Colour the browser chrome around the page — the address bar on Android
+ * Chrome, the title bar on installed windows.
+ *
+ * Two entries, not one: the site follows the system theme, and a single dark
+ * theme-color leaves a light page sitting under dark chrome. `media` lets the
+ * browser pick the one that matches, and the values are the same `canvas`
+ * token each theme paints the page with.
+ *
+ * Separate `viewport` export because Next 14 moved `themeColor` out of
+ * `metadata`; leaving it there builds fine but silently emits nothing.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbfbfb" },
+    { media: "(prefers-color-scheme: dark)", color: "#030303" },
+  ],
 };
 
 const FOOTER = [
@@ -86,7 +123,7 @@ const FOOTER = [
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
-      <body className="min-h-screen" cz-shortcut-listen="true">
+      <body className="min-h-screen">
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}
         </Script>

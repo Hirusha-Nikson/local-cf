@@ -60,6 +60,29 @@
     "production": {
       "name": "local-cf-site",
 
+      /*
+       * The public hostname.
+       *
+       * `custom_domain: true` makes Cloudflare create and own the DNS record
+       * and the certificate for this name — no A/AAAA/CNAME to add by hand,
+       * and nothing to keep in sync. It requires local-cf.com to already be a
+       * zone in this Cloudflare account.
+       *
+       * Only `www` is claimed here. The apex redirects to it with a Redirect
+       * Rule rather than a second route, so there is exactly one origin.
+       */
+      "routes": [{ "pattern": "www.local-cf.com", "custom_domain": true }],
+
+      /*
+       * Turn off the workers.dev hostname in production.
+       *
+       * Left on, local-cf-site.<subdomain>.workers.dev serves the identical
+       * site on a second indexable hostname — duplicate content competing with
+       * www.local-cf.com, and none of the canonical tags point at it. Staging
+       * keeps its workers.dev URL, which is the whole point of staging.
+       */
+      "workers_dev": false,
+
       "kv_namespaces": [
         {
           "binding": "TESTIMONIALS_KV",

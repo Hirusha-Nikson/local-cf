@@ -4,40 +4,18 @@ import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { DOC_PAGES, DOC_SECTIONS } from "@/lib/docs";
 
-export const DOC_SECTIONS = [
-  {
-    title: "Start here",
-    pages: [
-      { href: "/docs", label: "Introduction" },
-      { href: "/docs/getting-started", label: "Getting started" },
-    ],
-  },
-  {
-    title: "Guides",
-    pages: [
-      { href: "/docs/modes", label: "Modes A / B / C" },
-      { href: "/docs/features", label: "Features" },
-    ],
-  },
-  {
-    title: "Reference",
-    pages: [
-      { href: "/docs/cli", label: "CLI reference" },
-      { href: "/docs/architecture", label: "Architecture" },
-      { href: "/docs/troubleshooting", label: "Troubleshooting" },
-    ],
-  },
-];
-
-const FLAT = DOC_SECTIONS.flatMap((section) => section.pages);
+const FLAT = DOC_PAGES;
 
 function NavList({ pathname }: { pathname: string }) {
   return (
     <>
       {DOC_SECTIONS.map((section) => (
         <div key={section.title} className="mb-4">
-          <p className="px-3 pb-1.5 text-xs font-medium text-fg-subtle">{section.title}</p>
+          <p className="px-3 pb-1.5 text-xs font-medium text-fg-subtle">
+            {section.title}
+          </p>
           <ul className="space-y-0.5">
             {section.pages.map((page) => {
               const active = pathname === page.href;
@@ -85,7 +63,8 @@ export function DocsNav() {
 
   useEffect(() => setOpen(false), [pathname]);
 
-  const current = FLAT.find((page) => page.href === pathname)?.label ?? "Documentation";
+  const current =
+    FLAT.find((page) => page.href === pathname)?.label ?? "Documentation";
 
   return (
     <>
@@ -115,7 +94,10 @@ export function DocsNav() {
         )}
       </div>
 
-      <nav aria-label="Documentation" className="hidden md:sticky md:top-20 md:block">
+      <nav
+        aria-label="Documentation"
+        className="hidden md:sticky md:top-20 md:block"
+      >
         <NavList pathname={pathname} />
       </nav>
     </>
@@ -132,14 +114,19 @@ export function DocsPager() {
   const next = index < FLAT.length - 1 ? FLAT[index + 1] : undefined;
 
   return (
-    <nav aria-label="Pagination" className="mt-12 flex gap-3 border-t pt-6 hairline">
+    <nav
+      aria-label="Pagination"
+      className="mt-12 flex gap-3 border-t pt-6 hairline"
+    >
       {previous && (
         <Link
           href={previous.href}
           className="flex-1 rounded-lg bg-surface px-4 py-3 ring ring-line hover:bg-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <span className="block text-xs text-fg-subtle">Previous</span>
-          <span className="mt-0.5 block text-sm font-medium text-fg-strong">{previous.label}</span>
+          <span className="mt-0.5 block text-sm font-medium text-fg-strong">
+            {previous.label}
+          </span>
         </Link>
       )}
       {next && (
@@ -148,7 +135,9 @@ export function DocsPager() {
           className="flex-1 rounded-lg bg-surface px-4 py-3 text-right ring ring-line hover:bg-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <span className="block text-xs text-fg-subtle">Next</span>
-          <span className="mt-0.5 block text-sm font-medium text-fg-strong">{next.label}</span>
+          <span className="mt-0.5 block text-sm font-medium text-fg-strong">
+            {next.label}
+          </span>
         </Link>
       )}
     </nav>
@@ -168,7 +157,10 @@ export function DocsMeta() {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-fg-subtle">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center gap-1.5 text-sm text-fg-subtle"
+      >
         <Link href="/docs" className="hover:text-fg">
           Docs
         </Link>
