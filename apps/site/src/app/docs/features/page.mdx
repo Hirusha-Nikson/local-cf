@@ -1,0 +1,236 @@
+export const metadata = { title: "Features" };
+
+# What the studio can do
+
+A tab-by-tab tour of the dashboard. Each section notes which
+[modes](/docs/modes) it works in, because that varies more than you might
+expect.
+
+## Overview
+
+*All modes.*
+
+The landing tab. It lists every binding local-cf found in your wrangler config,
+grouped by type, each with the identifier it resolved to (`database_id`,
+`namespace_id`, `bucket_name`, class name) and its **fidelity** label — live, on
+disk, remote, or unsupported.
+
+Start here whenever something looks wrong. If a binding you expected is missing,
+it is a config parsing problem, not a studio problem, and the warnings shown on
+this tab usually say which line caused it.
+
+It also surfaces config warnings, the most common being:
+
+> D1 binding "DB" has no `database_id`; falling back to "my-database". Local
+> storage identity is derived from this value, so add it to guarantee the
+> dashboard opens the same database as your worker.
+
+That one is worth acting on. Without an explicit `database_id`, local-cf and
+your worker can end up resolving to different local databases.
+
+## D1
+
+*All modes. Read-only in attach unless `--allow-write`.*
+
+**Table browser.** Tables and views are read out of `sqlite_master`, with
+internal `sqlite_*` and `_cf_*` tables filtered out. Pick one and you get a
+paged view of its rows (50 at a time by default, up to 500) along with the total
+row count and full column metadata — type, nullability, default, primary key.
+
+**SQL editor.** Run arbitrary single statements. You get back the columns, the
+rows and the wall-clock duration of the query.
+
+In read-only mode, `SELECT` still works. Statements matching `INSERT`, `UPDATE`,
+`DELETE`, `DROP`, `ALTER`, `CREATE`, `REPLACE`, `TRUNCATE` or `PRAGMA` are
+refused with a `403` that tells you to use `local-cf dev` or `--allow-write`.
+
+**Multi-statement scripts.** Seed files and hand-written migrations run through
+a separate path that splits the script and executes it as a batch, rather than
+D1's `exec()` which requires one statement per line.
+
+**CSV export.** Download any table as CSV, with proper quoting for values
+containing commas, quotes or newlines.
+
+**Migrations.** local-cf reads `.sql` files from the directory named by
+`migrations_dir` on your D1 binding (default `migrations/`) and joins that list
+against the `d1_migrations` table — the same table Wrangler maintains, so the
+two tools agree on what has already run.
+
+Applying a migration:
+
+1. creates `d1_migrations` if it does not exist
+2. refuses with a `409` if that migration has already been applied
+3. runs the file as a multi-statement script
+4. records it in `d1_migrations`
+5. writes an audit entry
+
+They apply one at a time, deliberately — so a failure halfway through a set
+leaves you knowing exactly where you are.
+
+## KV
+
+*All modes. Read-only in attach unless `--allow-write`.*
+
+**Key listing** with prefix filtering and cursor paging (100 keys per page by
+default, up to 1000).
+
+**Value editing** in two encodings. Text values are edited as UTF-8; binary
+values are handled as base64, so you can store and retrieve non-text data
+without corrupting it. Metadata and `expirationTtl` are editable alongside the
+value.
+
+**Undo.** KV is the one binding where writes are reversible. Before a `put` or
+`delete`, local-cf captures the previous value and stores it as an inverse
+operation in the audit log. From **Snapshots & audit** you can replay that
+inverse to undo the write. Overwriting a key that did not exist records a
+`delete` as its inverse; deleting a key that did not exist records nothing to
+undo.
+
+**Bulk import** from a JSON array of `{ key, value, metadata }` entries. Entries
+whose `key` or `value` are not strings are skipped and counted rather than
+failing the whole import.
+
+**Whole-namespace export** to JSON, paged through the entire keyspace, including
+each value's encoding and metadata.
+
+## R2
+
+*All modes. Read-only in attach unless `--allow-write`.*
+
+**Object listing** with prefix and delimiter support, so you can browse a bucket
+as if it had folders. Cursor-paged, 100 objects per page by default, up to 1000.
+
+**Download.** Object bodies stream straight through the sidecar without being
+buffered, so large files do not blow up memory.
+
+**Upload.** The request's `Content-Type` is preserved onto the stored object.
+
+**Delete.** Note that R2 deletes are **not undoable** — object bodies are too
+large to stash for an inverse operation, so the audit log records the deletion
+but cannot reverse it. Take a snapshot first if that matters.
+
+## Durable Objects
+
+*`local-cf dev` only.*
+
+This is the tab where local-cf is most explicit about what is and is not
+possible, so it is worth explaining properly.
+
+**The runtime exposes no API for reading another Durable Object's storage.**
+Not a missing feature in local-cf — there is genuinely no way for one worker to
+enumerate what is inside another worker's DO. So this tab reports its capability
+as `addressable` and gives you the two primitives that *do* work:
+
+**Resolve a name to an ID.** Type `user-42` and get back the hex ID that
+`workerd` uses internally for `idFromName("user-42")`. Useful on its own for
+debugging, and needed for the next part.
+
+**Send a request to an instance.** Address it by name or by ID, then issue any
+method against any path with your own headers and body. You get the status,
+response headers, body and duration back.
+
+This is the inspection primitive. Every DO can at least be probed for liveness.
+And if you give your class a debug route:
+
+```ts
+export class Counter extends DurableObject {
+  async fetch(request: Request) {
+    const url = new URL(request.url);
+    if (url.pathname === "/__debug") {
+      return Response.json(Object.fromEntries(await this.ctx.storage.list()));
+    }
+    // ...your real handlers
+  }
+}
+```
+
+…then this tab becomes a real browser for that Durable Object's storage.
+
+In **attach** mode this tab reports a `503` explaining that DO state lives in
+another process. In **remote** mode, a `501`.
+
+## Queues
+
+*`local-cf dev` only.*
+
+**Send a single message** to any queue producer binding, with an optional
+`delaySeconds`. In `dev` mode your consumer is running in the same runtime, so
+the message is actually delivered and you can watch it get processed in the Logs
+tab.
+
+**Send a batch** of messages in one call.
+
+**Consumer configuration** is shown read-only: batch size, dead letter queue.
+
+**What is not available:** queue depth and dead-letter-queue contents. Neither
+is observable from another worker, in any mode.
+
+## Logs
+
+*`local-cf dev` and attach.*
+
+A tail of your worker's `console.*` output, plus local-cf's own studio messages
+(runtime version, bundler choice, reload notifications, snapshot progress).
+
+Logs are **polled, not streamed**. Miniflare captures the worker's output in the
+Node process, which the sidecar cannot reach directly — it asks the Node bridge
+for anything newer than a cursor it holds. Cheap, and it survives a runtime
+restart without dropping the connection.
+
+## Snapshots & audit
+
+*`local-cf dev` and attach.*
+
+### Snapshots
+
+A snapshot is a copy of your entire persist directory, so it captures D1, KV, R2
+and Durable Object storage together as one consistent set. They live in
+`.local-cf/snapshots/<name>/`.
+
+Names you provide are sanitised to `[A-Za-z0-9._-]`; leave the name blank and
+you get a timestamp.
+
+**Restoring** stops the runtime, replaces the persist directory, and starts it
+again. Two things follow from that:
+
+- In-memory Durable Object state does not survive. That is the point — you are
+  returning to the state on disk.
+- The API responds *before* doing the work, because the request is being served
+  by the very runtime the restore has to tear down. The dashboard polls until
+  the runtime comes back, which takes a moment.
+
+### Audit log
+
+Every write the dashboard makes is appended to `.local-cf/audit.jsonl` as one
+JSON object per line: sequence number, timestamp, mode, action, binding, and a
+short detail string.
+
+Actions recorded: `d1.query` (mutating statements only), `d1.exec`,
+`d1.migrate`, `kv.put`, `kv.delete`, `kv.import`, `r2.put`, `r2.delete`,
+`queue.send`, `queue.sendBatch`, and `audit.undo`.
+
+Entries that can be reversed carry their inverse operation with them. In
+practice that means **KV puts and deletes are undoable** and nothing else is —
+D1 statements and R2 deletes have no cheap inverse, so they are recorded but the
+undo button reports `409` or `501` rather than pretending.
+
+Because it is JSONL and it is in your project, you can also just read it:
+
+```bash
+tail -f .local-cf/audit.jsonl
+```
+
+## Not implemented yet
+
+local-cf detects these bindings in your config and shows them on the Overview
+tab, but cannot browse them:
+
+| Binding | Status |
+| --- | --- |
+| Vectorize | Detected; browsing not implemented |
+| Hyperdrive | Detected; inspection not implemented |
+| Analytics Engine | Detected; querying not implemented |
+| Workers AI | Detected; playground not implemented |
+| Service bindings | Wired through to your worker, but not browsable |
+
+Config `vars` *are* shown, with their values, in every mode.

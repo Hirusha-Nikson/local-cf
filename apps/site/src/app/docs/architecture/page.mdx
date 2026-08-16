@@ -2,6 +2,10 @@ export const metadata = { title: "Architecture" };
 
 # Architecture
 
+How local-cf is put together, and why. Nothing here is required reading to use
+it — but it explains the constraints behind several behaviours that otherwise
+look arbitrary.
+
 ## One runtime, two workers
 
 ```ts
@@ -18,7 +22,17 @@ to your worker over a service binding, which is how one port serves both.
 
 Binding identity is mirrored verbatim from your config onto the sidecar. That
 mirroring is the whole trick: Miniflare resolves two workers declaring the same
-`database_id` to the same gateway object.
+`database_id` to the same gateway object, so the sidecar is not reading a copy
+of your data — it holds the same handle your worker does.
+
+The mirroring is exact and deliberate. Same `database_id` for D1, same `id` for
+KV, same `bucket_name` for R2, same queue names, and — for Durable Objects — a
+cross-worker namespace binding with `scriptName` pointing at the worker that
+actually defines the class.
+
+In attach and remote mode there is only one worker in the runtime, since there
+is no user worker to run. That is precisely why Durable Object bindings do not
+exist in those modes: there is no class for them to point at.
 
 ## The Node bridge
 
@@ -41,6 +55,126 @@ The dashboard's static files are served this way too, which keeps the worker
 script small and avoids depending on Static Assets routing behaviour inside
 Miniflare.
 
+The bridge is where every filesystem-shaped feature actually lives: reading
+migration `.sql` files, tailing logs, appending to the audit log, and copying
+directories for snapshots.
+
+## Which bundler builds your worker
+
+`local-cf dev` has to turn your entrypoint into one ESM module for Miniflare.
+It tries two things, in order.
+
+**First, your project's own wrangler.** local-cf resolves `wrangler` from your
+project root and runs `wrangler deploy --dry-run --outdir <tmp>`, which invokes
+wrangler's real bundler and writes the result to disk without deploying or
+authenticating.
+
+This is not a shortcut — it is the correct answer. Wrangler's bundler knows
+which Node built-ins `workerd` implements natively and which need an `unenv`
+polyfill. Reproducing that matrix is what kept failing, with errors like
+`No such module "node:os"`.
+
+**Second, a built-in esbuild pass**, used when the project has no wrangler, when
+the dry run fails, or when it emits more than one module (wasm or text side
+modules that would need wiring up individually). It targets ES2022 with
+`workerd`, `worker`, `browser`, `import`, `default` resolution conditions, keeps
+`cloudflare:*` external, and inlines `.html`, `.txt` and `.sql` as text.
+
+Its one deliberate gap: **`.wasm` imports are not supported.** Emitting a
+separate module needs an output path, and local-cf builds in memory.
+
+Bare Node built-in specifiers get special handling in the esbuild path. Many
+built-in names are also real npm packages (`buffer`, `events`, `punycode`,
+`process`, `util`), so an installed package of that name wins over the built-in
+— it is the one your lockfile pinned. Without `nodejs_compat`, a built-in import
+fails at bundle time with the fix in the message rather than at runtime with a
+confusing resolution error.
+
+The banner tells you which bundler ran. Set `LOCAL_CF_BUNDLER=esbuild` to force
+the second path.
+
+## Which workerd runs your data
+
+The same reasoning, applied to the runtime instead of the bundler.
+
+The persist directory under `.wrangler/state` is SQLite written by `workerd`,
+and `workerd` migrates those files in place as it gains versions. Open a
+project's state with a `workerd` **newer** than the one its own wrangler ships,
+and that wrangler can stop being able to start at all — `std::terminate() called
+with no exception`, before serving a single request.
+
+So local-cf loads the copy of `miniflare` the *project* already depends on,
+falling back to its own bundled copy only when there isn't one. Sharing the
+persist directory then becomes safe by construction rather than by luck.
+
+When it does fall back and its `workerd` is newer than the project's, it warns —
+in the banner and in the log tail — and suggests either installing a matching
+miniflare or using `--persist-to` to keep the two states apart. Only a *newer*
+runtime is a problem; an older one either reads the files or fails loudly on its
+own.
+
+## Copy-first state handling
+
+Three separate copies exist, for three different reasons:
+
+**Attach snapshots** (`.local-cf/attached/{0,1,2}`). Attach mode never opens your
+real persist directory, because simply starting a runtime against it creates
+`-wal`/`-shm` files that a different `workerd` build may not reconcile.
+
+The directory names are single characters on purpose. Reusing one fixed
+directory means deleting it first, and on Windows that fails with `EBUSY` while
+anything still holds a handle. But a timestamped directory per run adds ~25
+characters, and Windows still enforces `MAX_PATH` (260) for SQLite — the `-wal`
+beside a D1 database is already a 64-character hash deep inside
+`v3/d1/miniflare-D1DatabaseObject`, so the extra depth pushes real projects over
+the limit and every query fails with `SQLITE_CANTOPEN`. Short rotating slots
+satisfy both constraints.
+
+**Pre-flight backups** (`.local-cf/backups/<timestamp>`). Taken before anything
+opens the persist directory read/write — `local-cf dev`, or attach once writes
+have been asked for. `dev` is the mode most able to migrate SQLite files forward
+past what your wrangler can read, so it is exactly the case that needs a way
+back. Three are kept.
+
+Above 2 GB, copying costs more disk and patience than the safety is worth, so
+it's skipped. In `dev` that is a warning rather than a failure — refusing to run
+would trade a rare loss for a certain one.
+
+**Snapshots** (`.local-cf/snapshots/<name>`), taken by you from the studio.
+
+All three filter out `-shm` files. That file is SQLite's shared-memory index
+describing one host's view of a WAL, meant to be rebuilt on open — carrying
+another process's copy into a snapshot makes `workerd` fail to read the database
+at all. The `-wal` beside it *is* real committed data and is always kept.
+
+## The read-only guard
+
+Attach mode refuses writes because two `workerd` processes writing one set of
+SQLite files is not a supported configuration and has corrupted real projects.
+
+It is enforced at the edge, as Hono middleware, rather than route by route: any
+method outside `GET`/`HEAD`/`OPTIONS` is refused with a `403` and an explanation.
+
+One route is exempt, then re-checked internally: `POST /d1/:binding/query`. It is
+the SQL editor's read path, and a studio that cannot run a `SELECT` has stopped
+being a browser — so it passes the middleware and is then matched
+statement-by-statement against a mutation pattern inside the route itself.
+
+## Fidelity as data, not decoration
+
+Every binding carries a `fidelity` field — `live`, `disk`, `remote` or
+`unsupported` — computed from the mode when the metadata is assembled, and
+rendered verbatim by the dashboard.
+
+This is the mechanism behind the project's central claim. It is what makes
+"attach mode is weaker than dev mode" a visible property of each binding rather
+than a caveat in a README. An `unsupported` binding carries a `note` explaining
+what would make it work.
+
+Config `vars` are deliberately never degraded: they are read straight out of the
+config file, so they are equally accurate in every mode and marking them
+otherwise would be a false warning.
+
 ## Typed end to end
 
 The sidecar is a Hono app; the dashboard consumes it with `hc<ApiType>`:
@@ -56,7 +190,8 @@ await client.d1[":binding"].migrations.apply.$post({
 
 Query strings and JSON bodies are validated on the routes, which is what puts
 them into the client's signature — a typo is a build error, not a runtime
-surprise.
+surprise. A route without a validator cannot be called with a body through the
+typed client at all, which is a useful forcing function.
 
 ## Two builds of one component tree
 

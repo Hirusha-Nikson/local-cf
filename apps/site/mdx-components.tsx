@@ -73,8 +73,16 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       className ? (
         <code className={className}>{children}</code>
       ) : (
-        // Monospace runs large beside body text; 0.9em evens the two out.
-        <code className="rounded-md bg-recessed px-1.5 py-0.5 font-mono text-[0.9em] text-fg">
+        /*
+         * Monospace runs large beside body text; 0.9em evens the two out.
+         *
+         * The chip separates itself with an edge and a darker ink, not a hue.
+         * These pages carry ~400 inline spans, so an accent colour on each one
+         * would make the rarest colour in the system the most frequent thing on
+         * the page — theme.css keeps brand orange for the logo and the active
+         * nav item. The ring is what does the work a colour would otherwise do.
+         */
+        <code className="rounded-md bg-recessed px-1.5 py-0.5 font-mono text-[0.9em] text-fg-strong ring ring-line">
           {children}
         </code>
       ),

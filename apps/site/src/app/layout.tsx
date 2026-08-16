@@ -134,8 +134,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="border-t hairline">
-              <p className="mx-auto max-w-6xl px-4 py-5 text-sm text-fg-subtle">
-                MIT licensed · not affiliated with Cloudflare
+              <p className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 px-4 py-5 text-sm text-fg-subtle">
+                <span>MIT licensed · not affiliated with Cloudflare</span>
+                <span aria-hidden="true" className="text-fg-faint">
+                  ·
+                </span>
+                <Link
+                  href="/privacy"
+                  className="hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  Privacy
+                </Link>
               </p>
             </div>
           </footer>

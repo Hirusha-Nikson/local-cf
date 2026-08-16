@@ -1,0 +1,280 @@
+export const metadata = { title: "Troubleshooting" };
+
+# Troubleshooting
+
+The errors you are most likely to hit, what they actually mean, and what to do
+about them.
+
+## Startup
+
+### "No wrangler.toml / wrangler.json(c) found"
+
+local-cf searches the current directory and then every parent directory for
+`wrangler.jsonc`, `wrangler.json` or `wrangler.toml`, in that order — the same
+search wrangler does.
+
+Run it from your project directory, or point at the config explicitly:
+
+```bash
+npx local-cf --config ../api/wrangler.toml
+```
+
+### "Your wrangler config has no `main` entrypoint"
+
+`local-cf dev` has to run your worker, and your config does not say where it is.
+
+Either add `main` to your config, or use attach mode, which never runs your
+worker:
+
+```bash
+npx local-cf
+```
+
+### `No such module "node:os"` / `Could not resolve "..."`
+
+Your worker needs part of wrangler's bundler that local-cf's built-in esbuild
+pass does not reimplement — usually a Node built-in that `workerd` does not
+provide natively and that wrangler polyfills with `unenv`.
+
+local-cf normally avoids this by bundling through your **project's own
+wrangler**. This error means it fell back to esbuild, which happens when
+wrangler is not installed in the project, or when the dry-run build failed.
+
+Two fixes:
+
+**Install wrangler in your project.** This is the real fix, and it makes
+`local-cf dev` behave exactly like your own dev server:
+
+```bash
+npm install -D wrangler
+```
+
+**Or browse the same data read-only in two terminals:**
+
+```bash
+npx wrangler dev     # terminal 1
+npx local-cf         # terminal 2
+```
+
+Check the `bundler` line in the startup banner to see which path ran.
+
+### "Workers runtime failed to start" / `std::terminate() called with no exception`
+
+`workerd` aborts like this when a SQLite file in the persist directory cannot be
+read. It usually means a previous run left the files in a state this `workerd`
+build cannot reconcile.
+
+In order of preference:
+
+1. Restore from `.local-cf/backups/` — local-cf keeps the three most recent
+   copies taken before any read/write open
+2. Restore a snapshot you took from the studio, in `.local-cf/snapshots/`
+3. Delete `.wrangler/state` and start clean, if the data is disposable
+
+If it keeps happening, read the next section — a runtime version mismatch is the
+usual cause.
+
+### "Could not prepare a snapshot of the persist directory: every slot is locked"
+
+Attach mode rotates through three copy slots under `.local-cf/attached/`. All
+three being locked means orphaned `local-cf` processes are still holding file
+handles — almost always on Windows, where an open handle makes a directory
+undeletable outright rather than merely stale.
+
+Close any other local-cf processes and try again. If none are visible, check for
+a stray `workerd` process and end it.
+
+### Worker imports a `.wasm` module
+
+Not supported yet. The built-in esbuild pass builds in memory, and emitting a
+separate wasm module needs an output path.
+
+If your project has wrangler installed, local-cf will try wrangler's bundler
+first — but a build that emits more than one module is rejected too, since
+side-modules would have to be wired into Miniflare individually.
+
+Use attach mode; D1, KV and R2 all still work.
+
+## Version mismatches
+
+### local-cf's workerd is newer than my project's
+
+You will see this in the banner and the logs:
+
+> local-cf's runtime (workerd 1.20260730.1) is newer than your project's
+> (workerd 1.20250109.0). Writing `.wrangler/state` with it can migrate those
+> SQLite files in place and stop your own `wrangler dev` from starting.
+
+This is a real risk, not a formality. `workerd` migrates persist files forward as
+it gains versions, and there is no way back — a newer `workerd` can leave state
+your project's own wrangler cannot open.
+
+Three responses, best first:
+
+**Install a matching miniflare in your project.** local-cf prefers your
+project's copy whenever it can find one, so this removes the mismatch entirely:
+
+```bash
+npm install -D miniflare
+```
+
+**Keep local-cf's state separate:**
+
+```bash
+npx local-cf dev --persist-to .local-cf/state
+```
+
+You lose data sharing with your dev server, but nothing can be migrated
+underneath it.
+
+**Or stay in attach mode**, which never writes your real persist directory at
+all. If you only wanted to look, this costs you nothing.
+
+Only a *newer* runtime triggers this warning. An older one either reads your
+files fine or fails loudly on its own, so it needs no warning.
+
+## Writes are refused
+
+### "local-cf is read-only in attach mode"
+
+Working as intended. Bare `npx local-cf` runs [attach mode](/docs/modes#mode-b--attached-local-cf-attach-the-default),
+which is read-only because another dev server owns the persist directory, and
+two runtimes writing the same SQLite files can corrupt them.
+
+If you want to edit data, use the full studio:
+
+```bash
+npx local-cf dev
+```
+
+If your dev server is genuinely stopped and you want to edit what it left
+behind:
+
+```bash
+npx local-cf --allow-write
+```
+
+`--allow-write` is a promise you are making — local-cf cannot verify the other
+server is stopped.
+
+### My SELECT works but my UPDATE doesn't
+
+Also intended. The read-only guard exempts the SQL query route so that browsing
+keeps working, then checks each statement individually. Anything matching
+`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `REPLACE`, `TRUNCATE`
+or `PRAGMA` is refused. Same two fixes as above.
+
+## Data looks wrong
+
+### My data is stale / new writes don't appear
+
+You are in attach mode, which reads a **point-in-time copy** taken when local-cf
+started. Data your dev server writes afterwards will not appear.
+
+Restart local-cf to take a fresh copy, or use `local-cf dev` for a live view.
+Bindings showing **"on disk"** rather than **"live"** in the dashboard are the
+ones affected.
+
+### The dashboard shows a different database than my worker
+
+Almost always a missing `database_id`. Check the Overview tab for this warning:
+
+> D1 binding "DB" has no `database_id`; falling back to "my-database". Local
+> storage identity is derived from this value…
+
+Local storage identity comes from `database_id`. Without one, local-cf falls
+back to `database_name` and then to the binding name — and if your worker
+resolves differently, you are looking at two different databases.
+
+Add an explicit `database_id` to the binding. Any stable string works locally;
+it does not have to be a real Cloudflare ID.
+
+### A binding is missing from Overview
+
+local-cf parses your config directly rather than through wrangler internals, and
+skips entries it cannot make sense of — each with a warning shown on the
+Overview tab. The usual causes:
+
+| Binding | Requires |
+| --- | --- |
+| `d1_databases` | `binding` |
+| `kv_namespaces` | `binding` |
+| `r2_buckets` | `binding` |
+| `durable_objects.bindings` | `name` **and** `class_name` |
+| `queues.producers` | `binding` **and** `queue` |
+| `queues.consumers` | `queue` |
+
+If you are using `--env`, remember that a named environment **replaces**
+bindings wholesale rather than merging with the top level — the same as
+wrangler. A binding declared only at the top level will not be present in
+`[env.staging]`.
+
+### Durable Objects say "unavailable"
+
+Expected outside `local-cf dev`. In attach mode there is no user worker in
+local-cf's runtime, so there is no class for a DO binding to point at. In remote
+mode there is no REST API for reading another Durable Object's storage.
+
+Run `npx local-cf dev` for live Durable Object access.
+
+Even in `dev` mode, you cannot browse a DO's storage directly — no runtime API
+exists for that. See [Features](/docs/features#durable-objects) for the `/__debug`
+route pattern that makes one browsable.
+
+### Queue depth / dead letter contents are empty
+
+Neither is observable from another worker in any mode. local-cf can send
+messages to producers and show your consumer's configuration, and in `dev` mode
+your consumer really runs — watch the Logs tab to see messages processed. But
+inspecting the queue itself is not possible.
+
+## Ports and URLs
+
+### `http://127.0.0.1:8787/` returns a 404
+
+You are not in `dev` mode. Only `local-cf dev` runs your worker; attach and
+remote serve the studio alone. The `404` body says which mode you are in.
+
+The studio is always at `/__local-cf/ui/`.
+
+### Port already in use
+
+Your dev server probably has 8787. In attach mode local-cf must run on a
+different port, since it is not replacing your dev server:
+
+```bash
+npx local-cf --port 8788
+```
+
+## How local-cf protects your data
+
+Worth knowing before you need it. Everything lives in `.local-cf/` inside your
+project:
+
+| Path | What | When it's written |
+| --- | --- | --- |
+| `.local-cf/attached/{0,1,2}/` | Point-in-time copies attach mode reads | Every attach run, rotating |
+| `.local-cf/backups/<timestamp>/` | Pre-flight backup, 3 kept | Before any read/write open |
+| `.local-cf/snapshots/<name>/` | Snapshots you took | On demand from the studio |
+| `.local-cf/audit.jsonl` | One JSON line per dashboard write | Every write |
+
+Three behaviours follow from this:
+
+- **`local-cf dev` backs up before it starts.** If a migration goes wrong, the
+  previous state is in `.local-cf/backups/` under a timestamp.
+- **Attach never touches your real state** unless you pass `--allow-write`.
+- **Every write is recorded**, and KV writes can be undone from the audit log.
+
+Above 2 GB, backups are skipped — copying costs more than the safety is worth.
+In `dev` that is a warning; attach keeps its guarantee and fails instead.
+
+Add `.local-cf/` to your `.gitignore`.
+
+## Still stuck?
+
+Check the **Logs** tab first — studio messages there often explain what the
+banner only hinted at.
+
+Then [open an issue](https://github.com/Hirusha-Nikson/local-cf/issues) with
+your `local-cf --version`, the startup banner, your platform, and the relevant
+part of your wrangler config.

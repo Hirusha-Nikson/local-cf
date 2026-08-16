@@ -2,64 +2,197 @@ export const metadata = { title: "Getting started" };
 
 # Getting started
 
+This page takes you from nothing to a working studio, and explains what you are
+looking at once it opens.
+
+## Before you start
+
+You need:
+
+- **Node.js 20.11 or newer.** Check with `node --version`.
+- **A Cloudflare Workers project** with a `wrangler.jsonc`, `wrangler.json` or
+  `wrangler.toml` in it. local-cf reads that file to discover your bindings — it
+  is the only configuration it needs.
+
+You do **not** need a Cloudflare account, an API token, or an internet
+connection, unless you specifically want [remote mode](/docs/modes#mode-c--remote-local-cf-remote).
+
+You also do not need to install anything. `npx` fetches and runs local-cf on
+demand.
+
 ## 1. Run it
 
-From the directory containing your wrangler config:
+Open a terminal in the directory containing your wrangler config and run:
 
 ```bash
 npx local-cf
 ```
 
-You will get one port serving two things:
+local-cf searches for a config file in that directory and then walks up through
+parent directories, the same way wrangler does. If it finds one, it prints a
+startup banner and a URL.
+
+Open the URL under `studio` in your browser. That's the setup.
+
+### What the banner is telling you
+
+```
+  local-cf v0.3.1
+  mode      attach (Mode B — shared persist directory)
+  access    read-only — another dev server owns this state
+  worker    my-api
+  runtime   miniflare 4.20250109.0 (your project's)
+  bindings  1 d1, 2 kv, 1 r2
+  snapshot  /path/to/project/.local-cf/attached/0
+  studio    http://127.0.0.1:8787/__local-cf/ui/
+```
+
+Each line is worth knowing:
+
+| Line | Meaning |
+| --- | --- |
+| `mode` | Which of the three [modes](/docs/modes) you are in |
+| `access` | Whether the studio will accept writes. `read-only` is the default for bare `local-cf` |
+| `worker` | The `name` from your wrangler config |
+| `bundler` | Only in `dev` mode. Whether your worker was built by your project's wrangler or local-cf's built-in esbuild |
+| `runtime` | Which copy of Miniflare — and therefore which `workerd` — is running. `(your project's)` is the good case |
+| `bindings` | A count of the storage bindings it found in your config |
+| `snapshot` / `backup` | Where local-cf copied your state to. See [safety](/docs/troubleshooting#how-local-cf-protects-your-data) |
+| `app` | Your worker's URL. Only present in `dev` mode |
+| `studio` | The dashboard. Always present |
+
+If a line is missing or says something unexpected, [Troubleshooting](/docs/troubleshooting)
+explains the common cases.
+
+## 2. Read-only, and how to leave it
+
+Bare `npx local-cf` opens the studio **read-only**. Every button that would
+change data is refused, and the API answers writes with a `403` explaining why.
+
+This is not a limitation to work around casually — it exists because two
+`workerd` processes writing the same SQLite files at once can corrupt them.
+There are two correct ways out:
+
+**If you want the full studio, use `dev` instead.** It runs your worker itself,
+so nothing else is holding those files:
+
+```bash
+npx local-cf dev
+```
+
+**If your dev server is genuinely stopped and you just want to edit the data it
+left behind**, opt back in explicitly:
+
+```bash
+npx local-cf --allow-write
+```
+
+Only use `--allow-write` when the other dev server is actually not running.
+That flag is the promise you make; local-cf cannot check it for you.
+
+## 3. Two things on one port
+
+In `dev` mode, one port serves both your app and the studio:
 
 | URL | What it is |
 | --- | --- |
 | `http://127.0.0.1:8787/` | your worker |
 | `http://127.0.0.1:8787/__local-cf/ui/` | the studio |
 
-Requests outside `/__local-cf` are forwarded to your worker over a service
-binding, which is why a single port is enough.
+Anything outside `/__local-cf` is forwarded to your worker over an internal
+service binding, which is why a single port is enough and why you don't have to
+change any URLs in your frontend.
 
-## 2. Options
+In **attach** mode there is no worker in local-cf's runtime — your own dev
+server is still serving your app on its own port. Only the studio URL is live
+here; requesting `/` returns a `404` with a JSON message saying exactly that.
+
+Because attach mode does not serve your app, run it on a **different port** from
+your dev server:
 
 ```bash
-local-cf --port 8080 --open        # pick a port, open the browser
-local-cf --env staging             # use [env.staging] from your config
-local-cf --config ../app/wrangler.toml
-local-cf --no-watch                # do not rebuild on file changes
-local-cf --quiet                   # keep worker logs out of the terminal
+npx local-cf --port 8788
 ```
 
-## 3. D1 migrations
+## 4. A tour of the studio
 
-Put `.sql` files in the directory named by `migrations_dir` (default
-`migrations/`). The Migrations tab lists them, marks which have been applied,
-and applies pending ones one at a time.
+The studio is a single page with tabs down the left. Briefly:
 
-Applied migrations are tracked in a `d1_migrations` table, the same convention
-Wrangler uses, so the two do not fight.
+- **Overview** — every binding local-cf found, each labelled with its fidelity:
+  **live** (same object as your worker), **on disk** (a copy), **remote** (your
+  real Cloudflare account), or **unsupported** in this mode. Start here to
+  confirm it found what you expected.
+- **D1** — browse tables, run SQL, export CSV, apply migrations.
+- **KV** — list and filter keys, edit values, set TTLs, import/export JSON.
+- **R2** — list, upload, download and delete objects.
+- **Durable Objects** — resolve names to IDs and send requests to instances.
+- **Queues** — send messages to your producers.
+- **Logs** — a tail of your worker's `console.*` output.
+- **Snapshots & audit** — copy and restore your whole local state, and see a
+  record of every write the dashboard has made.
 
-Multi-statement files work: local-cf splits the script itself and runs it as a
-batch, rather than using D1's `exec()` (which requires one statement per line).
+[Features](/docs/features) covers each of these properly.
 
-## 4. Snapshots
+## 5. Applying D1 migrations
 
-Before a risky change, take a snapshot from the **Snapshots & audit** tab. A
-snapshot is a copy of the whole persist directory (`.wrangler/state/v3`), so it
-captures D1, KV, R2 and Durable Object storage together.
+Put `.sql` files in the directory named by `migrations_dir` in your D1 binding
+(default `migrations/`). The **Migrations** panel in the D1 tab lists them,
+marks which have already been applied, and applies pending ones one at a time.
 
-Restoring stops the runtime, swaps the directory, and starts it again — in-memory
-Durable Object state does not survive, by design.
+Applied migrations are tracked in a `d1_migrations` table — the same convention
+Wrangler uses, so the two agree with each other and won't re-run each other's
+work.
 
-## 5. Remote mode
+Multi-statement files work. local-cf splits the script and runs it as a batch
+rather than using D1's `exec()`, which requires one statement per line.
 
-To browse the real resources in your Cloudflare account instead:
+## 6. Taking a snapshot before something risky
+
+Before a migration you are unsure about, or a bulk delete, open **Snapshots &
+audit** and take a snapshot. A snapshot copies the entire persist directory, so
+it captures D1, KV, R2 and Durable Object storage together as one consistent
+set.
+
+Restoring stops the runtime, swaps the directory back, and starts it again. Any
+in-memory Durable Object state is lost in that restart — by design, since the
+point is to return to the state on disk.
+
+Snapshots live in `.local-cf/snapshots/` in your project.
+
+## 7. Browsing your real Cloudflare account
+
+To point the studio at production data instead of local data:
 
 ```bash
 export CLOUDFLARE_ACCOUNT_ID=...
 export CLOUDFLARE_API_TOKEN=...
-local-cf remote
+npx local-cf remote
 ```
 
-The token needs **D1 Edit**, **Workers KV Storage Edit** and **Workers R2 Storage
-Edit**. It stays in the Node process and is never sent to the browser.
+Or pass them as flags:
+
+```bash
+npx local-cf remote --account-id <id> --api-token <token>
+```
+
+The token needs **D1 Edit**, **Workers KV Storage Edit** and **Workers R2
+Storage Edit**. It stays in the Node process and is never sent to the browser,
+so it cannot end up in devtools or `localStorage`.
+
+Remote mode covers D1, KV and R2. Durable Objects and Queues have no REST API
+equivalent, so those tabs report that plainly rather than showing you nothing.
+
+## Recommended: ignore local-cf's directory
+
+local-cf keeps its own state in `.local-cf/` in your project — snapshots,
+backups, the audit log. Add it to your `.gitignore`:
+
+```gitignore
+.local-cf/
+```
+
+## Next
+
+- [Modes](/docs/modes) — the full comparison, and when each is the right choice
+- [CLI reference](/docs/cli) — every flag
+- [Troubleshooting](/docs/troubleshooting) — if the first run didn't go well
