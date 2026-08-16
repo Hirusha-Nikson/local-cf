@@ -29,7 +29,8 @@ see a change working end to end:
 pnpm demo
 ```
 
-`docs/RUNNING.md` covers the individual modes.
+The individual modes are documented at `/docs/modes` on the site, from
+`apps/site/src/app/docs/modes/page.mdx`.
 
 ## The build order matters
 

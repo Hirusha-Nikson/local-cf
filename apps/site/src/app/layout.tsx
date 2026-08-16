@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { SiteNav } from "../components/site-nav";
 import "./globals.css";
 import { Geist } from "next/font/google";
+import { REVIEW_FORM_URL } from "@/lib/testimonial-display";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -55,6 +56,9 @@ const FOOTER = [
     links: [
       { href: "/docs/getting-started", label: "Getting started" },
       { href: "/docs/modes", label: "Modes A / B / C" },
+      // Leaves the site for a Google Form, so unlike the other footer links
+      // this one opens in a new tab rather than navigating away mid-visit.
+      { href: REVIEW_FORM_URL, label: "Add your review", external: true },
     ],
   },
   {
@@ -62,6 +66,7 @@ const FOOTER = [
     links: [
       { href: "/docs", label: "Documentation" },
       { href: "/docs/architecture", label: "Architecture" },
+      { href: "/reviews", label: "Reviews" },
       { href: "https://www.npmjs.com/package/local-cf", label: "npm package" },
     ],
   },
@@ -114,6 +119,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       <li key={link.href}>
                         <Link
                           href={link.href}
+                          {...("external" in link && link.external
+                            ? { target: "_blank", rel: "noopener noreferrer" }
+                            : {})}
                           className="text-sm text-fg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                         >
                           {link.label}

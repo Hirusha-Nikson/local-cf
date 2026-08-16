@@ -1,4 +1,12 @@
-import { ArrowRight, Boxes, FileClock, GitBranch, Layers, ShieldCheck, WifiOff } from "lucide-react";
+import {
+  ArrowRight,
+  Boxes,
+  FileClock,
+  GitBranch,
+  Layers,
+  ShieldCheck,
+  WifiOff,
+} from "lucide-react";
 import Link from "next/link";
 import { DashboardMock } from "../components/dashboard-mock";
 import {
@@ -10,6 +18,7 @@ import {
 } from "../components/install-command";
 import { ModeTabs } from "../components/mode-tabs";
 import { Reveal } from "../components/reveal";
+import { Testimonials } from "../components/testimonials";
 
 const FEATURES = [
   {
@@ -48,12 +57,26 @@ const FEATURES = [
 
 const BINDINGS = ["D1", "KV", "R2", "Durable Objects", "Queues"];
 
+/**
+ * Testimonials are approved in a Google Sheet rather than in the repo, so the
+ * page has to be able to change without a deploy.
+ *
+ * Fifteen minutes, matching `REFRESH_AFTER_MS` in lib/testimonials.ts. Next
+ * takes the lower of this and any fetch revalidate inside the render, so the
+ * two have to agree or this number is decorative. Google caches published CSV
+ * for around five minutes on its own, which sets the real floor.
+ */
+export const revalidate = 900;
+
 export default function HomePage() {
   return (
     <main>
       {/* ---------------------------------------------------------------- Hero */}
       <section className="relative isolate overflow-hidden">
-        <div aria-hidden="true" className="hero-glow absolute inset-x-0 top-0 -z-10 h-152" />
+        <div
+          aria-hidden="true"
+          className="hero-glow absolute inset-x-0 top-0 -z-10 h-152"
+        />
 
         <div className="mx-auto max-w-6xl px-4 pt-16 pb-12 sm:pt-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -64,13 +87,15 @@ export default function HomePage() {
               </p>
 
               <h1 className="mt-5 text-4xl font-semibold text-balance text-fg-strong sm:text-5xl">
-                See inside your Cloudflare Worker&rsquo;s storage, without leaving localhost.
+                See inside your Cloudflare Worker&rsquo;s storage, without
+                leaving localhost.
               </h1>
 
               <p className="mt-5 max-w-xl text-lg text-pretty text-fg-subtle">
-                Attach to the dev server you already have running, or let local-cf boot your worker
-                and the studio in one runtime — where the dashboard reads and writes the exact same
-                D1, KV, R2, Durable Objects and Queues your code does.
+                Attach to the dev server you already have running, or let
+                local-cf boot your worker and the studio in one runtime — where
+                the dashboard reads and writes the exact same D1, KV, R2,
+                Durable Objects and Queues your code does.
               </p>
 
               {/*
@@ -82,19 +107,25 @@ export default function HomePage() {
                 <InstallCommand command={BROWSE_COMMAND} />
                 <Link
                   href="/docs/getting-started"
-                  className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white ring ring-accent-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg bg-accent hover:bg-accent-hover px-4 py-2.5 text-sm font-medium text-white ring ring-accent-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span
                     aria-hidden="true"
                     className="absolute inset-0 rounded-[inherit] group-hover:from-accent-fill"
                   />
                   <span className="relative">Get started</span>
-                  <ArrowRight aria-hidden="true" strokeWidth={1.75} className="relative size-4" />
+                  <ArrowRight
+                    aria-hidden="true"
+                    strokeWidth={1.75}
+                    className="relative size-4"
+                  />
                 </Link>
               </div>
 
               <p className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-subtle">
-                <span>Read-only, so a first run cannot break anything. To edit, run</span>
+                <span>
+                  Read-only, so a first run cannot break anything. To edit, run
+                </span>
                 <code className="font-mono text-fg">{EDIT_COMMAND}</code>
               </p>
 
@@ -137,7 +168,8 @@ export default function HomePage() {
               A real view of local state, not an approximation
             </h2>
             <p className="mt-3 text-fg-subtle">
-              Everything the studio shows comes from the runtime your worker is actually using.
+              Everything the studio shows comes from the runtime your worker is
+              actually using.
             </p>
           </div>
         </Reveal>
@@ -155,8 +187,12 @@ export default function HomePage() {
                   strokeWidth={1.75}
                   className="size-5 text-orange-600"
                 />
-                <h3 className="mt-3.5 font-semibold text-fg-strong">{feature.title}</h3>
-                <p className="mt-1.5 text-sm leading-6 text-fg-subtle">{feature.body}</p>
+                <h3 className="mt-3.5 font-semibold text-fg-strong">
+                  {feature.title}
+                </h3>
+                <p className="mt-1.5 text-sm leading-6 text-fg-subtle">
+                  {feature.body}
+                </p>
               </article>
             </Reveal>
           ))}
@@ -171,8 +207,8 @@ export default function HomePage() {
               Three modes, stated plainly
             </h2>
             <p className="mt-3 text-fg-subtle">
-              Each one is honest about what it can and cannot reach. Pick the one that matches how
-              you work.
+              Each one is honest about what it can and cannot reach. Pick the
+              one that matches how you work.
             </p>
           </div>
         </Reveal>
@@ -182,17 +218,24 @@ export default function HomePage() {
         </Reveal>
       </section>
 
+      {/* --------------------------------------------------------- Testimonials */}
+      {/* Renders nothing until at least one response has been approved. */}
+      <Testimonials />
+
       {/* ------------------------------------------------------------------ CTA */}
       <section className="mx-auto max-w-6xl px-4 py-16">
         <Reveal>
           <div className="relative isolate overflow-hidden rounded-2xl bg-surface px-6 py-14 text-center ring ring-line">
-            <div aria-hidden="true" className="hero-glow absolute inset-0 -z-10" />
+            <div
+              aria-hidden="true"
+              className="hero-glow absolute inset-0 -z-10"
+            />
             <h2 className="text-2xl font-semibold text-balance text-fg-strong sm:text-3xl">
               Two commands. No account.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-pretty text-fg-subtle">
-              Run either one in your worker&rsquo;s directory and the studio opens on the state you
-              already have.
+              Run either one in your worker&rsquo;s directory and the studio
+              opens on the state you already have.
             </p>
 
             {/*

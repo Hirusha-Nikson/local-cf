@@ -17,15 +17,67 @@
     "enabled": true,
   },
 
+  // Last-known-good copy of the approved testimonials. Google's publish-to-web
+  // CSV is the source of truth but not a dependable one, and the incremental
+  // cache below is in-worker memory, so this is what survives a cold start
+  // while docs.google.com is having a bad morning. See src/lib/testimonials.ts.
+  "kv_namespaces": [
+    {
+      "binding": "TESTIMONIALS_KV",
+      "id": "d84fef5eff05467baeac8426720783cc",
+    },
+  ],
+
+  /*
+   * TESTIMONIALS_CSV_URL is deliberately absent from this file.
+   *
+   * It is the Google Sheets "publish to web" CSV for the *Public* tab, and it
+   * is set as a secret instead of a var:
+   *
+   *     pnpm wrangler secret put TESTIMONIALS_CSV_URL
+   *     pnpm wrangler secret put TESTIMONIALS_CSV_URL --env production
+   *
+   * Secrets and vars both arrive on the same `env` object, so nothing in the
+   * code has to know the difference. Do not add it back here as a var even
+   * with an empty value: a var shadows a secret of the same name on deploy,
+   * so `"TESTIMONIALS_CSV_URL": ""` would silently blank the live one and the
+   * testimonials section would just stop rendering.
+   *
+   * Keeping it out of the repo is not because the published tab is private —
+   * it is world-readable by design — but because the pages are server-rendered,
+   * so this URL appears nowhere else public. That leaves room to fix a mistake
+   * in the sheet before anyone has the address.
+   *
+   * Local dev reads it from apps/site/.env.local, which is gitignored.
+   */
+
   // Deployed with `--env production` from the `release` branch.
+  //
+  // Named environments do not inherit top-level bindings, so anything the
+  // worker needs has to be repeated here. Leaving these out fails at runtime,
+  // not at deploy time, which is the expensive way to find out.
   "env": {
     "production": {
       "name": "local-cf-site",
+
+      "kv_namespaces": [
+        {
+          "binding": "TESTIMONIALS_KV",
+          "id": "7d36ffb4405d4b0582205f1c831d4eab",
+        },
+      ],
+
+      // Secrets are per-environment, so TESTIMONIALS_CSV_URL and
+      // TESTIMONIALS_REFRESH_TOKEN both need setting again with
+      // `--env production`. Setting them on staging does not carry over.
     },
   },
 
+  // TESTIMONIALS_REFRESH_TOKEN gates the /api/testimonials?refresh endpoint and
+  // is a secret, not a var: `wrangler secret put TESTIMONIALS_REFRESH_TOKEN`.
+
   // For ISR at scale, add an R2 bucket bound as NEXT_INC_CACHE_R2_BUCKET and a
   // WORKER_SELF_REFERENCE service binding, then switch open-next.config.ts to
-  // r2IncrementalCache. Both need resources created in your account first —
-  // see docs/PUBLISHING.md.
+  // r2IncrementalCache. Both need the resources creating in your Cloudflare
+  // account first.
 }
