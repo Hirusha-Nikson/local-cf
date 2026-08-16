@@ -21,8 +21,9 @@
     "cf:deploy": "opennextjs-cloudflare deploy",
     "cf:deploy:production": "opennextjs-cloudflare deploy --env production",
     "search-index": "node scripts/build-search-index.mjs",
-    "prebuild": "node scripts/build-search-index.mjs",
-    "predev": "node scripts/build-search-index.mjs"
+    "prebuild": "node scripts/build-search-index.mjs && node scripts/build-routes.mjs",
+    "predev": "node scripts/build-search-index.mjs && node scripts/build-routes.mjs",
+    "build-routes": "node scripts/build-routes.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
