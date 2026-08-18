@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardMock } from "../components/dashboard-mock";
+import { HomeJsonLd } from "../components/json-ld";
 import {
   BROWSE_COMMAND,
   CommandPair,
@@ -71,6 +72,13 @@ export const revalidate = 900;
 export default function HomePage() {
   return (
     <main>
+      {/*
+        The product, described for machines. `featureList` is the same array the
+        feature grid below renders from, so the markup cannot describe a version
+        of this page that no longer exists.
+      */}
+      <HomeJsonLd featureList={FEATURES.map((feature) => feature.title)} />
+
       {/* ---------------------------------------------------------------- Hero */}
       <section className="relative isolate overflow-hidden">
         <div

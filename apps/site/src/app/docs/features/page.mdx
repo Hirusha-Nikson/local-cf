@@ -1,4 +1,20 @@
-export const metadata = { title: "Features" };
+import { DocsJsonLd } from "@/components/json-ld";
+
+export const metadata = {
+  title: "Features",
+  description:
+    "A tab-by-tab tour of the studio: D1, KV, R2, Durable Objects, Queues, logs, snapshots and the audit log — and which of the three modes each one works in.",
+  alternates: { canonical: "/docs/features" },
+  openGraph: {
+    type: "article",
+    url: "/docs/features",
+    title: "Features · local-cf",
+    description:
+      "What each tab does — D1, KV, R2, Durable Objects, Queues, logs, snapshots and undo.",
+  },
+};
+
+<DocsJsonLd path="/docs/features" description={metadata.description} />
 
 # What the studio can do
 

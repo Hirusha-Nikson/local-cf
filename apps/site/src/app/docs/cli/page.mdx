@@ -1,4 +1,20 @@
-export const metadata = { title: "CLI reference" };
+import { DocsJsonLd } from "@/components/json-ld";
+
+export const metadata = {
+  title: "CLI reference",
+  description:
+    "Every local-cf command and flag — attach, dev and remote — plus the environment variables it reads, the URLs it serves and the files it writes.",
+  alternates: { canonical: "/docs/cli" },
+  openGraph: {
+    type: "article",
+    url: "/docs/cli",
+    title: "CLI reference · local-cf",
+    description:
+      "Commands, options, environment variables and the files local-cf writes.",
+  },
+};
+
+<DocsJsonLd path="/docs/cli" description={metadata.description} />
 
 # CLI reference
 

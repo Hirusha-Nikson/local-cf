@@ -1,4 +1,20 @@
-export const metadata = { title: "Troubleshooting" };
+import { DocsJsonLd } from "@/components/json-ld";
+
+export const metadata = {
+  title: "Troubleshooting",
+  description:
+    "Fixes for the errors you are most likely to hit with local-cf: missing wrangler config, version mismatches, refused writes, stale data and port conflicts.",
+  alternates: { canonical: "/docs/troubleshooting" },
+  openGraph: {
+    type: "article",
+    url: "/docs/troubleshooting",
+    title: "Troubleshooting · local-cf",
+    description:
+      "What the common local-cf errors actually mean, and what to do about them.",
+  },
+};
+
+<DocsJsonLd path="/docs/troubleshooting" description={metadata.description} />
 
 # Troubleshooting
 

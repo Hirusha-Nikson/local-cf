@@ -6,23 +6,25 @@ import type { ReactNode } from "react";
 import { SiteNav } from "../components/site-nav";
 import "./globals.css";
 import { Geist } from "next/font/google";
-import { SITE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 import { REVIEW_FORM_URL } from "@/lib/testimonial-display";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
-/*
- * Written for the results page, not for us.
+// Shared with the JSON-LD graph — see lib/site.ts for how it is written.
+const DESCRIPTION = SITE_DESCRIPTION;
+
+/**
+ * The headline on a social card, kept under 60 characters.
  *
- * "local-first studio" is how we describe local-cf; it is not what anyone types
- * into a search box. The words people actually use for this problem are the
- * product names (D1, KV, R2) and the tools they already run (wrangler,
- * Miniflare), so those lead here. Kept under ~155 characters, which is roughly
- * where Google starts truncating.
+ * Written once and used by both `openGraph` and `twitter`, because the two
+ * drifting apart means a link renders differently depending on where it was
+ * pasted, and nobody notices until someone screenshots it.
  */
-const DESCRIPTION =
-  "View and edit your local D1 tables, KV keys and R2 objects while wrangler dev runs. A local dashboard for Cloudflare Workers — offline, no account needed.";
+const SOCIAL_TITLE = "See inside your Worker's storage, without leaving localhost";
+
+const X_HANDLE = "@HirushaNikson";
 
 export const metadata: Metadata = {
   // Required for the relative OG and canonical URLs below to resolve.
@@ -57,13 +59,28 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "local-cf",
     url: "/",
-    title: "See inside your Cloudflare Worker's storage, without leaving localhost",
+    /*
+     * 59 characters. The full sentence — "See inside your Cloudflare Worker's
+     * storage, without leaving localhost" — is 70, which X truncates in a card,
+     * and it is already set in 53px type inside the OG image directly above
+     * this line. "Cloudflare" is the word the image can carry and this cannot.
+     */
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
+    // Declares which audience this is written for. One locale, because there
+    // is one translation.
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "See inside your Cloudflare Worker's storage, without leaving localhost",
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
+    /*
+     * `site` attributes the card to an account, `creator` to a byline. It is
+     * the same person here, and X wants both present to show either.
+     */
+    site: X_HANDLE,
+    creator: X_HANDLE,
   },
   robots: { index: true, follow: true },
 };
