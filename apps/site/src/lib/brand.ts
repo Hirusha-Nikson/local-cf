@@ -1,47 +1,17 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { tintPng } from "./logo-tint";
-
 /**
- * The raw mark, read from `packages/cli/logo.png` rather than copied into this
- * app so there is one logo file in the repo and the generated images cannot
- * drift from it. Only ever called during `next build` — Satori needs the bytes
- * inline, and the Worker has no filesystem to read them from at request time.
- */
-function readLogo(): Buffer {
-  // cwd during `next build` is apps/site; the logo lives two levels up.
-  return readFileSync(join(process.cwd(), "..", "..", "packages", "cli", "logo.png"));
-}
-
-/**
- * The local-cf mark, as a data URI, for build-time image generation.
+ * Brand values, mirrored from packages/ui/src/theme.css for the places that
+ * cannot see CSS — the web app manifest, and anything else that needs a colour
+ * as a literal rather than a custom property.
  *
- * Returns null rather than throwing: an icon is decorative, and a missing file
- * should degrade to the monogram fallback, not fail a deploy.
+ * This module used to also read `packages/cli/logo.png` off disk and hand it to
+ * Satori as a data URI, so the favicon, the apple icon and the OG card could be
+ * generated at build time. That is gone, and the reason is worth keeping:
+ * `readFileSync` resolved fine locally and returned nothing inside GitHub
+ * Actions, and because a missing logo degraded to a "cf" monogram instead of
+ * failing the build, a monogram shipped to production on every one of those
+ * images without a single red check. All four are static files now — see
+ * src/app/{favicon.ico,icon.png,icon1.png,apple-icon.png,opengraph-image.png}.
  */
-export function logoDataUri(): string | null {
-  try {
-    return `data:image/png;base64,${readLogo().toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The same mark in flat white, for placing on the orange OG card where the
- * orange original would disappear. Derived rather than committed — see
- * logo-tint.ts for why.
- */
-export function logoWhiteDataUri(): string | null {
-  try {
-    return `data:image/png;base64,${tintPng(readLogo(), [255, 255, 255]).toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
-/* Brand values, mirrored from packages/ui/src/theme.css for generators that
- * cannot see CSS (Satori) or must be a literal (theme-color). */
 export const BRAND = {
   orange: "#f6821f",
   ink: "#0b0b0b",

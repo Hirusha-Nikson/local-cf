@@ -21,9 +21,22 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "browser",
     background_color: BRAND.ink,
     theme_color: BRAND.ink,
+    /*
+     * Referenced from `public/` with plain, unhashed paths.
+     *
+     * The icons in `src/app` are metadata file routes and Next serves them at
+     * a cache-busted `?<hash>` URL that changes whenever the file does. A
+     * manifest is fetched and cached by the OS separately from the page, so
+     * pointing it at those would leave installed launchers holding a URL that
+     * no longer resolves. These two are ordinary static assets instead.
+     *
+     * 192 and 512 are the pair Android asks for: the first for the launcher
+     * icon, the second for the splash screen.
+     */
     icons: [
       { src: "/favicon.ico", sizes: "16x16 32x32 48x48", type: "image/x-icon" },
-      { src: "/apple-icon", sizes: "180x180", type: "image/png" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
   };
 }

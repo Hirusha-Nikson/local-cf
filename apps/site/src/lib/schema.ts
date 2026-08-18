@@ -112,7 +112,10 @@ export function homeSchema(featureList: readonly string[]): JsonLdGraph {
         isAccessibleForFree: true,
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         featureList: [...featureList],
-        image: absoluteUrl("/opengraph-image"),
+        // The static card in src/app. The extension is part of the URL — when
+        // this was a generated `opengraph-image.tsx` the route was extensionless,
+        // and leaving the old path here would have put a 404 in the markup.
+        image: absoluteUrl("/opengraph-image.png"),
         sameAs: [GITHUB_URL, NPM_URL],
         author: { "@id": AUTHOR_ID },
         publisher: { "@id": AUTHOR_ID },

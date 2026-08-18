@@ -1,0 +1,1 @@
+The local-cf studio open on a demo worker's D1 tables, beside the words: see inside your Cloudflare Worker's storage, without leaving localhost.
