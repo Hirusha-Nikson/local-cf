@@ -29,7 +29,8 @@ and Queues your worker is using — same runtime, offline, no Cloudflare account
 
 <a href="https://www.local-cf.com"><b>Website</b></a> &nbsp;·&nbsp;
 <a href="https://github.com/Hirusha-Nikson/local-cf"><b>Source</b></a> &nbsp;·&nbsp;
-<a href="https://github.com/Hirusha-Nikson/local-cf/issues"><b>Issues</b></a>
+<a href="https://github.com/Hirusha-Nikson/local-cf/issues"><b>Issues</b></a> &nbsp;·&nbsp;
+<a href="https://github.com/sponsors/Hirusha-Nikson"><b>❤️ Sponsor</b></a>
 
 </div>
 
@@ -214,6 +215,29 @@ Common to `dev` / `attach` / `remote`:
 
 <img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
 
+## ❤️ Sponsor
+
+`local-cf` is MIT, free, and built and maintained by one person in his own time.
+There is no company behind it and nothing is gated behind a paid tier — the whole
+studio is what you get with `npx local-cf`.
+
+If it saved you a deploy-and-pray cycle, sponsoring keeps the release notes coming:
+
+<p>
+  <a href="https://github.com/sponsors/Hirusha-Nikson"><img src="https://img.shields.io/badge/Sponsor_on_GitHub-FC7C1E?style=for-the-badge&labelColor=161616&logo=githubsponsors&logoColor=FC7C1E" alt="Sponsor on GitHub" /></a>
+</p>
+
+Sponsorship goes to maintenance, not features-for-hire: keeping up with `workerd` and
+Wrangler releases, widening binding coverage, and closing the gaps in
+[Known limitations](#-known-limitations). **Companies** shipping on Workers who want
+`local-cf` to stay current are the most useful sponsors of all — one seat's worth a
+month covers a lot of runtime-upgrade churn.
+
+Not in a position to sponsor? Starring the repo, filing a good bug report, or telling
+another Workers developer it exists genuinely helps too.
+
+<img src="https://img.shields.io/badge/-FC7C1E?style=flat-square&color=FC7C1E" width="100%" height="3" alt="" />
+
 ## 🔗 Links
 
 | | |
@@ -222,6 +246,7 @@ Common to `dev` / `attach` / `remote`:
 | 📖 Source & full docs | [github.com/Hirusha-Nikson/local-cf](https://github.com/Hirusha-Nikson/local-cf) |
 | 🐛 Issues | [Report a bug](https://github.com/Hirusha-Nikson/local-cf/issues) |
 | 📦 npm | [npmjs.com/package/local-cf](https://www.npmjs.com/package/local-cf) |
+| ❤️ Sponsor | [github.com/sponsors/Hirusha-Nikson](https://github.com/sponsors/Hirusha-Nikson) |
 
 ## License
 
