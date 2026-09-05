@@ -1,0 +1,12 @@
+# Powers the "Sponsor" button on github.com/Hirusha-Nikson/local-cf.
+# Only takes effect on the default branch.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+
+github: [Hirusha-Nikson]
+
+# Uncomment once the matching account exists — an empty value stops the
+# whole file from rendering, so add each line only when it resolves.
+# polar: local-cf
+# thanks_dev: gh/Hirusha-Nikson
+# open_collective: local-cf
+# custom: ["https://www.local-cf.com/sponsor"]
