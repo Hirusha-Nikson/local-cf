@@ -1,7 +1,7 @@
 "use client";
 
 import { Logo, ThemeToggle } from "@local-cf/ui";
-import { Menu, X } from "lucide-react";
+import { Heart, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GitHubIcon, NpmIcon } from "./brand-icons";
@@ -14,6 +14,7 @@ const NAV = [
 
 const GITHUB = "https://github.com/Hirusha-Nikson/local-cf";
 const NPM = "https://www.npmjs.com/package/local-cf";
+const SPONSOR = "https://github.com/sponsors/Hirusha-Nikson";
 
 const EXTERNAL = [
   { href: GITHUB, label: "GitHub", icon: GitHubIcon },
@@ -82,6 +83,23 @@ export function SiteNav() {
             </Link>
           ))}
 
+          {/*
+            A bordered button rather than a fourth icon-only mark: this is a
+            call to action, not another destination, and the heart carries the
+            meaning faster than the word alone. Rose, not `accent` — the blue
+            belongs to the primary `npx local-cf` CTA and a second blue button
+            in the same viewport would split the emphasis.
+          */}
+          <a
+            href={SPONSOR}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-1 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-fg-subtle ring ring-line hover:bg-tint hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <Heart aria-hidden="true" className="size-3.5 text-rose-500" />
+            Sponsor
+          </a>
+
           <span aria-hidden="true" className="mx-1 h-5 w-px bg-hairline" />
           <ThemeToggle />
         </nav>
@@ -136,6 +154,14 @@ export function SiteNav() {
               {item.label}
             </a>
           ))}
+
+          <a
+            href={SPONSOR}
+            className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-fg hover:bg-tint"
+          >
+            <Heart aria-hidden="true" className="size-4 text-rose-500" />
+            Sponsor
+          </a>
 
           {/* Search belongs on a phone too — the ⌘K shortcut is desktop-only. */}
           <div className="px-2.5 pt-2 pb-1">

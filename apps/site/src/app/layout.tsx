@@ -1,4 +1,5 @@
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@local-cf/ui";
+import { Heart } from "lucide-react";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Script from "next/script";
@@ -25,6 +26,8 @@ const DESCRIPTION = SITE_DESCRIPTION;
 const SOCIAL_TITLE = "See inside your Worker's storage, without leaving localhost";
 
 const X_HANDLE = "@HirushaNikson";
+
+const SPONSOR_URL = "https://github.com/sponsors/Hirusha-Nikson";
 
 export const metadata: Metadata = {
   // Required for the relative OG and canonical URLs below to resolve.
@@ -133,6 +136,7 @@ const FOOTER = [
         href: "https://github.com/Hirusha-Nikson/local-cf/blob/main/CONTRIBUTING.md",
         label: "Contributing",
       },
+      { href: SPONSOR_URL, label: "Sponsor", external: true },
     ],
   },
 ];
@@ -163,6 +167,23 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <p className="mt-1.5 max-w-xs text-sm text-fg-subtle">
                   Your data. Your runtime. No account.
                 </p>
+
+                {/*
+                  Repeated from the "Project" column on purpose. That column is
+                  the correct home for it, but a fourth grey link in a list of
+                  four is read by nobody; this block sits top-left where the
+                  footer is actually scanned, and the heart gives it a shape
+                  the surrounding text doesn't have.
+                */}
+                <a
+                  href={SPONSOR_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm text-fg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <Heart aria-hidden="true" className="size-3.5 text-rose-500" />
+                  Sponsor this project
+                </a>
               </div>
 
               {FOOTER.map((column) => (
